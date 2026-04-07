@@ -1,0 +1,112 @@
+
+╔════════════════════════════════════════════════════════════════════════╗
+║          ML PIPELINE RESULTS: SOFT SENSOR FOR CHROMIUM ESTIMATION      ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+Generated: 2026-04-07 13:55:09
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. CONFIGURATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Test Size: 20.0%
+Train Size: 80.0%
+Random State: 42
+
+Feature Scenarios:
+{
+  "full": [
+    "EC",
+    "TDS",
+    "pH",
+    "Suhu Air (\u00b0C)",
+    "Suhu Lingkungan (\u00b0C)",
+    "Kelembapan Lingkungan (%)",
+    "Tegangan (V)"
+  ],
+  "core": [
+    "EC",
+    "TDS",
+    "pH"
+  ],
+  "minimal": [
+    "EC",
+    "pH"
+  ]
+}
+
+Models:
+  - Linear Regression (Baseline)
+  - Random Forest Regressor (100 trees, max_depth=20)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. PERFORMANCE COMPARISON
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Scenario Model      RMSE       MAE       R2
+    full    lr 20.486714 13.021984 0.692392
+    full    rf  4.356419  2.280731 0.986090
+    core    lr 19.489093 11.959146 0.721621
+    core    rf  4.657593  2.166660 0.984101
+ minimal    lr 23.931840 14.167745 0.580237
+ minimal    rf  5.202813  3.215841 0.980161
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. BEST MODEL (SELECTED FOR PRODUCTION)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Model Name: RF
+Scenario: FULL
+
+Performance Metrics:
+  - RMSE: 4.356419 μg/L
+  - MAE:  2.280731 μg/L
+  - R²:   0.986090
+
+Features Used:
+  EC, TDS, pH, Suhu Air (°C), Suhu Lingkungan (°C), Kelembapan Lingkungan (%), Tegangan (V)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. MODEL ARTIFACTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Saved Models:
+  - models/best_model_rf_full.pkl
+  - models/best_model_scaler_full.pkl
+  - models/best_model_metadata.json
+
+Results:
+  - results/ml_results_report.txt (this file)
+  - results/model_comparison.csv
+  - results/plots/predictions_comparison.png
+  - results/plots/metrics_comparison.png
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. INFERENCE USAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Use the SoftSensorInference class to make predictions:
+
+    from ml_pipeline_cr_soft_sensor import SoftSensorInference
+    
+    sensor = SoftSensorInference('models/best_model_rf_full.pkl', 
+                                  'models/best_model_scaler_full.pkl')
+    
+    # Single prediction
+    cr_pred = sensor.predict_single({
+        'EC': 1200,
+        'TDS': 850,
+        'pH': 6.8,
+        'Suhu Air (°C)': 26.5,
+        'Suhu Lingkungan (°C)': 28.3,
+        'Kelembapan Lingkungan (%)': 72.1,
+        'Tegangan (V)': 3.95
+    })
+    print(f"Predicted Cr: {cr_pred:.2f} μg/L")
+    
+    # Batch predictions
+    import pandas as pd
+    sensor_data = pd.read_csv('sensor_data.csv')
+    cr_predictions = sensor.predict_batch(sensor_data)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
