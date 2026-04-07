@@ -1,3 +1,9 @@
 .venv
 .venv/
 __pycache__/
+code/GFQA_v3/
+
+# Large dataset folders
+Dataset/GFQA_v3/
+Dataset/UNEP*
+
