@@ -1,0 +1,36 @@
+Source,Kategori,Variabel,N
+A Comprehensive,Danau,Suhu Air (°C),153603
+A Comprehensive,Danau,pH,153603
+A Comprehensive,Sungai,Suhu Air (°C),1852579
+A Comprehensive,Sungai,pH,1852579
+Heavy Metal Indices,Sungai,Cr,40
+Monteria,Akuakultur,Suhu Air (°C),182
+Monteria,Akuakultur,pH,182
+Nigeria,Air tanah,TDS,6
+Nigeria,Air tanah,pH,6
+Nigeria,Sungai,TDS,9
+Nigeria,Sungai,pH,9
+UNEP,Air tanah,Cr,29413
+UNEP,Air tanah,EC,69484
+UNEP,Air tanah,Suhu Air (°C),49678
+UNEP,Air tanah,Suhu Lingkungan (°C),10943
+UNEP,Air tanah,TDS,12780
+UNEP,Air tanah,pH,59745
+UNEP,Danau,Cr,48810
+UNEP,Danau,EC,82241
+UNEP,Danau,Suhu Air (°C),159435
+UNEP,Danau,Suhu Lingkungan (°C),13286
+UNEP,Danau,TDS,27587
+UNEP,Danau,pH,96477
+UNEP,Sungai,Cr,458165
+UNEP,Sungai,EC,566114
+UNEP,Sungai,Suhu Air (°C),522656
+UNEP,Sungai,Suhu Lingkungan (°C),89657
+UNEP,Sungai,TDS,156135
+UNEP,Sungai,pH,754384
+UNEP,Waduk,Cr,14164
+UNEP,Waduk,EC,21428
+UNEP,Waduk,Suhu Air (°C),242007
+UNEP,Waduk,Suhu Lingkungan (°C),8362
+UNEP,Waduk,TDS,8688
+UNEP,Waduk,pH,25403
