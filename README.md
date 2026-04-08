@@ -118,6 +118,90 @@ Penjelasan output:
 - **Example 3 (time-series):** simulasi monitoring 24 jam untuk melihat dinamika Cr terhadap perubahan kondisi sensor.
 - **Example 4 (validation):** membandingkan prediksi vs nilai aktual untuk mengukur akurasi model (`MAE`, `RMSE`, dan error persentase).
 
+## 1D. Catatan Testing Dataset Ekstrem dan Pipeline yang Digunakan
+
+Selain training dan evaluasi standar, project ini juga dipakai untuk **behavior testing** model Cr dengan dataset baru yang didesain lebih ekstrem (misalnya kondisi air bersih, air tercemar, sampai limbah/industrial-like).
+
+Tujuan utamanya:
+- menguji konsistensi respons model,
+- mengecek arah tren fitur kunci,
+- dan memastikan prediksi tetap stabil saat parameter sensor berubah.
+
+### Rumus yang digunakan (derive TDS from EC)
+
+Rumus turunan TDS dari EC yang dipakai pada proses testing:
+
+`TDS = EC x 0.64`
+
+Catatan satuan:
+- Jika `EC` dalam `uS/cm`, maka `TDS` hasil konversi umum dipakai sebagai `mg/L` (aproksimasi untuk air alami).
+- Faktor `0.64` adalah faktor empiris yang umum (dapat bervariasi menurut komposisi ionik air).
+
+### Pipeline 1 (inference + analisis dataset real)
+
+![Visual Pipeline 1](image/Pipline-1.jpeg)
+
+Ringkasan pipeline yang digunakan:
+1. Load dataset CSV dengan kolom sensor (`Date Time`, `Temperature`, `ORP`, `pH`, `Turbidity`, `Conductivity`, `fDOM`).
+2. Rename `Conductivity (uS/cm)` menjadi `EC`.
+3. Buat kolom `TDS` dari `EC` dengan rumus `TDS = EC x 0.64`.
+4. Validasi kolom `pH`, `EC`, `TDS`.
+5. Drop missing values.
+6. Load model `.pkl`.
+7. Prediksi Cr dan simpan sebagai `Cr_predicted`.
+8. Analisis statistik (`min`, `max`, `mean`, `std`) + visualisasi:
+  - histogram `Cr_predicted`,
+  - scatter `EC vs Cr_predicted`,
+  - scatter `pH vs Cr_predicted`.
+9. Simpan hasil ke file CSV baru.
+10. Library: `pandas`, `numpy`, `matplotlib`, `joblib`.
+
+### Pipeline 2 (behavior validation: scenario + sensitivity)
+
+![Visual Pipeline 2](image/Pipeline-2.jpeg)
+
+Ringkasan pipeline yang digunakan untuk file `code/test_model_behavior.py`:
+1. Load model dari `models/best_model_rf_full.pkl` (+ scaler jika tersedia).
+2. Load dataset testing:
+  - `Dataset/TestScenarios/synthetic_cr_scenario_test.csv`
+  - `Dataset/TestScenarios/synthetic_cr_sensitivity_test.csv`
+3. Jalankan inference, tambah kolom `Cr_predicted` (dan `Error` opsional jika ada ground truth).
+4. Scenario analysis:
+  - group by `Scenario`,
+  - hitung mean/min/max/std,
+  - validasi urutan `Clean < Moderately Polluted < Highly Polluted < Extreme Industrial-like`,
+  - beri flag `PASS/FAIL`,
+  - simpan ke `results/testing/test_scenario_analysis.csv`.
+5. Sensitivity analysis (`EC`, `TDS`, `pH`):
+  - hitung korelasi Spearman dengan `Cr_predicted`,
+  - validasi tren: `EC` positif, `TDS` positif, `pH` negatif,
+  - klasifikasi kekuatan tren (`Strong/Moderate/Weak`),
+  - simpan ke `results/testing/test_sensitivity_analysis.csv`.
+6. Stability check:
+  - cek delta antar baris,
+  - deteksi spike saat perubahan output terlalu besar dibanding perubahan input.
+7. Visualisasi ke `results/testing/plots/`:
+  - scenario vs predicted Cr,
+  - `EC vs Cr_predicted`,
+  - `TDS vs Cr_predicted`,
+  - `pH vs Cr_predicted`.
+8. Final summary di console:
+  - scenario `PASS/FAIL`,
+  - trend `EC/TDS/pH` `OK/NOT OK`,
+  - overall `VALID/NOT VALID`.
+
+Implementasi modular yang dipakai:
+- `load_model()`
+- `load_data()`
+- `run_inference()`
+- `analyze_scenarios()`
+- `analyze_sensitivity()`
+- `check_stability()`
+- `plot_results()`
+- `main()`
+
+Catatan: evaluasi ini fokus pada **validasi perilaku model** (konsistensi, monotonic trend, stabilitas), bukan evaluasi akurasi klasik seperti RMSE/MAE.
+
 ## 2. Cara Dataset Synthetic Dibuat
 
 Semua dataset synthetic dibuat dengan alur umum berikut:
