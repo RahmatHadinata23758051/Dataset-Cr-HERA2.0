@@ -118,7 +118,7 @@ Penjelasan output:
 - **Example 3 (time-series):** simulasi monitoring 24 jam untuk melihat dinamika Cr terhadap perubahan kondisi sensor.
 - **Example 4 (validation):** membandingkan prediksi vs nilai aktual untuk mengukur akurasi model (`MAE`, `RMSE`, dan error persentase).
 
-## 1D. Catatan Testing Dataset Ekstrem dan Prompt yang Digunakan
+## 1D. Catatan Testing Dataset Ekstrem dan Pipeline yang Digunakan
 
 Selain training dan evaluasi standar, project ini juga dipakai untuk **behavior testing** model Cr dengan dataset baru yang didesain lebih ekstrem (misalnya kondisi air bersih, air tercemar, sampai limbah/industrial-like).
 
@@ -137,9 +137,9 @@ Catatan satuan:
 - Jika `EC` dalam `uS/cm`, maka `TDS` hasil konversi umum dipakai sebagai `mg/L` (aproksimasi untuk air alami).
 - Faktor `0.64` adalah faktor empiris yang umum (dapat bervariasi menurut komposisi ionik air).
 
-### Prompt 1 (inference + analisis dataset real)
+### Pipeline 1 (inference + analisis dataset real)
 
-Ringkasan prompt yang digunakan:
+Ringkasan pipeline yang digunakan:
 1. Load dataset CSV dengan kolom sensor (`Date Time`, `Temperature`, `ORP`, `pH`, `Turbidity`, `Conductivity`, `fDOM`).
 2. Rename `Conductivity (uS/cm)` menjadi `EC`.
 3. Buat kolom `TDS` dari `EC` dengan rumus `TDS = EC x 0.64`.
@@ -154,9 +154,9 @@ Ringkasan prompt yang digunakan:
 9. Simpan hasil ke file CSV baru.
 10. Library: `pandas`, `numpy`, `matplotlib`, `joblib`.
 
-### Prompt 2 (behavior validation: scenario + sensitivity)
+### Pipeline 2 (behavior validation: scenario + sensitivity)
 
-Ringkasan prompt yang digunakan untuk file `code/test_model_behavior.py`:
+Ringkasan pipeline yang digunakan untuk file `code/test_model_behavior.py`:
 1. Load model dari `models/best_model_rf_full.pkl` (+ scaler jika tersedia).
 2. Load dataset testing:
   - `Dataset/TestScenarios/synthetic_cr_scenario_test.csv`
