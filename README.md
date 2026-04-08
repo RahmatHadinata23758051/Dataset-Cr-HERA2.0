@@ -139,6 +139,8 @@ Catatan satuan:
 
 ### Pipeline 1 (inference + analisis dataset real)
 
+![Visual Pipeline 1](image/Pipline-1.jpeg)
+
 Ringkasan pipeline yang digunakan:
 1. Load dataset CSV dengan kolom sensor (`Date Time`, `Temperature`, `ORP`, `pH`, `Turbidity`, `Conductivity`, `fDOM`).
 2. Rename `Conductivity (uS/cm)` menjadi `EC`.
@@ -155,6 +157,8 @@ Ringkasan pipeline yang digunakan:
 10. Library: `pandas`, `numpy`, `matplotlib`, `joblib`.
 
 ### Pipeline 2 (behavior validation: scenario + sensitivity)
+
+![Visual Pipeline 2](image/Pipeline-2.jpeg)
 
 Ringkasan pipeline yang digunakan untuk file `code/test_model_behavior.py`:
 1. Load model dari `models/best_model_rf_full.pkl` (+ scaler jika tersedia).
