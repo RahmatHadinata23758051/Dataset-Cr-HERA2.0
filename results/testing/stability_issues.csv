@@ -1,2 +1,1 @@
-Sweep_Variable,Index,Input_Delta,Output_Delta,Change_Ratio,Status
-pH,30,0.0,0.020324999999999704,1263.6224524407219,SPIKE
+Sweep_Variable,Index,Input_Delta,Output_Delta,Relative_Input_Change,Relative_Output_Change,Change_Ratio,Classification

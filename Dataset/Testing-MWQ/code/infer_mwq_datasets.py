@@ -9,6 +9,7 @@ Soft Sensor model to predict Chromium concentration.
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import joblib
@@ -30,13 +31,40 @@ def load_model(model_path: Path, scaler_path: Path | None = None) -> tuple:
         print(f"Loading scaler from {scaler_path}...")
         scaler = joblib.load(scaler_path)
     
-    return model, scaler
+    metadata = load_metadata_for_model(model_path)
+    return model, scaler, metadata
+
+
+def load_metadata_for_model(model_path: Path) -> dict:
+    """Load metadata associated with the selected model artifact."""
+    metadata_candidates = [
+        model_path.with_suffix(".metadata.json"),
+        model_path.parent / "best_model_metadata.json",
+    ]
+    for metadata_path in metadata_candidates:
+        if metadata_path.exists():
+            print(f"Loading metadata from {metadata_path}...")
+            with open(metadata_path, "r", encoding="utf-8") as f:
+                metadata = json.load(f)
+            if metadata_path.name == "best_model_metadata.json":
+                expected_stem = f"best_model_{metadata.get('model_name', metadata.get('model_type', 'rf'))}_{metadata.get('scenario', 'full')}"
+                if model_path.stem != expected_stem and model_path.stem != f"model_{metadata.get('model_name', metadata.get('model_type', 'rf'))}_{metadata.get('scenario', 'full')}":
+                    raise ValueError(
+                        f"Metadata-model mismatch: {metadata_path} indicates {expected_stem}, "
+                        f"but selected model is {model_path.name}."
+                    )
+            return metadata
+    raise FileNotFoundError(
+        f"No metadata found for model {model_path}. "
+        f"Expected one of: {[str(p) for p in metadata_candidates]}"
+    )
 
 
 def process_mwq_dataset(
     csv_path: Path,
     dataset_name: str,
-) -> pd.DataFrame:
+    feature_cols: list[str],
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Load and preprocess MWQ real dataset.
     
@@ -59,8 +87,20 @@ def process_mwq_dataset(
     elif "Conductivity (μS)" in df.columns:
         df = df.rename(columns={"Conductivity (μS)": "EC"})
     
-    # Calculate TDS from EC (typical conversion factor for freshwater)
-    df["TDS"] = df["EC"] * 0.64
+    if "EC" not in df.columns:
+        raise ValueError(
+            "Column EC is required for this model but was not found. "
+            "Provide EC directly or a recognized conductivity column."
+        )
+
+    # Build per-row imputation audit trail
+    imputation_flags = pd.DataFrame(index=df.index)
+
+    if "TDS" not in df.columns:
+        df["TDS"] = df["EC"] * 0.64
+        imputation_flags["imputed_TDS_from_EC_x_0_64"] = True
+    else:
+        imputation_flags["imputed_TDS_from_EC_x_0_64"] = False
     
     # Handle turbidity column variations
     if "Turbidity (FNU)" not in df.columns and "Turbidity (NTU)" in df.columns:
@@ -73,34 +113,53 @@ def process_mwq_dataset(
     if "fDOM (QSU)" not in df.columns:
         df["fDOM (QSU)"] = 3.0  # Default synthetic value
     
-    # Required columns for inference
-    required_cols = ["pH", "EC", "TDS", "Temperature (°C)", "ORP (mV)", 
-                     "Turbidity (FNU)", "fDOM (QSU)"]
-    
-    missing_cols = [col for col in required_cols if col not in df.columns]
-    if missing_cols:
-        raise ValueError(f"Missing required columns: {missing_cols}")
-    
-    # Create synthetic columns for sensor data (not in real dataset)
-    # These are required by the model but not present in raw MWQ data
-    if "Suhu Air (°C)" not in df.columns:
-        df["Suhu Air (°C)"] = df["Temperature (°C)"]
-    
-    if "Suhu Lingkungan (°C)" not in df.columns:
-        # Approximate air temp as sensor temp + small offset
-        df["Suhu Lingkungan (°C)"] = df["Temperature (°C)"] + 1.5
-    
-    if "Kelembapan Lingkungan (%)" not in df.columns:
-        # Default reasonable humidity
+    if "Suhu Air (°C)" in feature_cols and "Suhu Air (°C)" not in df.columns:
+        if "Temperature (°C)" in df.columns:
+            df["Suhu Air (°C)"] = df["Temperature (°C)"]
+            imputation_flags["imputed_Suhu_Air_from_Temperature"] = True
+        else:
+            raise ValueError(
+                "Feature 'Suhu Air (°C)' is required by model but missing and cannot be derived "
+                "because 'Temperature (°C)' is not present."
+            )
+    elif "Suhu Air (°C)" in feature_cols:
+        imputation_flags["imputed_Suhu_Air_from_Temperature"] = False
+
+    if "Suhu Lingkungan (°C)" in feature_cols and "Suhu Lingkungan (°C)" not in df.columns:
+        if "Temperature (°C)" in df.columns:
+            df["Suhu Lingkungan (°C)"] = df["Temperature (°C)"] + 1.5
+            imputation_flags["imputed_Suhu_Lingkungan_default_offset"] = True
+        else:
+            raise ValueError(
+                "Feature 'Suhu Lingkungan (°C)' is required by model but missing and cannot be derived "
+                "because 'Temperature (°C)' is not present."
+            )
+    elif "Suhu Lingkungan (°C)" in feature_cols:
+        imputation_flags["imputed_Suhu_Lingkungan_default_offset"] = False
+
+    if "Kelembapan Lingkungan (%)" in feature_cols and "Kelembapan Lingkungan (%)" not in df.columns:
         df["Kelembapan Lingkungan (%)"] = 70.0
-    
-    if "Tegangan (V)" not in df.columns:
-        # Default sensor voltage
+        imputation_flags["imputed_Kelembapan_default_70"] = True
+    elif "Kelembapan Lingkungan (%)" in feature_cols:
+        imputation_flags["imputed_Kelembapan_default_70"] = False
+
+    if "Tegangan (V)" in feature_cols and "Tegangan (V)" not in df.columns:
         df["Tegangan (V)"] = 3.8
-    
-    # Drop missing values in critical columns
+        imputation_flags["imputed_Tegangan_default_3_8"] = True
+    elif "Tegangan (V)" in feature_cols:
+        imputation_flags["imputed_Tegangan_default_3_8"] = False
+
+    missing_cols = [col for col in feature_cols if col not in df.columns]
+    if missing_cols:
+        raise ValueError(
+            f"Missing required model features: {missing_cols}. "
+            f"Available columns after preprocessing: {list(df.columns)}"
+        )
+
+    # Drop missing values in required model columns
     initial_rows = len(df)
-    df = df.dropna(subset=["pH", "EC", "TDS"])
+    df = df.dropna(subset=feature_cols)
+    imputation_flags = imputation_flags.loc[df.index].copy()
     dropped_rows = initial_rows - len(df)
     
     print(f"  Rows after validation: {len(df)} (dropped {dropped_rows})")
@@ -108,7 +167,12 @@ def process_mwq_dataset(
     print(f"  pH range: {df['pH'].min():.2f} - {df['pH'].max():.2f}")
     print(f"  TDS range: {df['TDS'].min():.2f} - {df['TDS'].max():.2f} mg/L")
     
-    return df
+    # Track if any fallback path was used for each row
+    imputation_flags["any_default_or_imputation"] = imputation_flags.any(axis=1)
+
+    print(f"  Rows with default/imputed feature values: {int(imputation_flags['any_default_or_imputation'].sum())}")
+
+    return df, imputation_flags
 
 
 def run_inference(
@@ -120,7 +184,14 @@ def run_inference(
     """Run model inference on processed dataset."""
     print(f"  Running inference on {len(data)} samples...")
     
-    x = data[feature_cols].values
+    missing_cols = [col for col in feature_cols if col not in data.columns]
+    if missing_cols:
+        raise ValueError(
+            f"Missing required feature columns: {missing_cols}. "
+            f"Required by model metadata: {feature_cols}"
+        )
+
+    x = data[feature_cols].copy()
     
     # Scale if scaler exists
     if scaler:
@@ -345,6 +416,7 @@ def write_outputs(
     output_dir: Path,
     data_list: list[tuple[str, pd.DataFrame]],
     summary_stats: dict,
+    imputation_audits: list[tuple[str, pd.DataFrame]],
 ) -> None:
     """Save predictions and summary to CSV files."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -368,6 +440,17 @@ def write_outputs(
     summary_path = output_dir / "summary_statistics.csv"
     summary_df.to_csv(summary_path, index=False)
     print(f"  ✓ {summary_path.name}")
+
+    # Save imputation/default audit
+    all_audits = []
+    for dataset_name, audit_df in imputation_audits:
+        temp = audit_df.copy()
+        temp.insert(0, "Dataset", dataset_name)
+        all_audits.append(temp)
+    if all_audits:
+        audit_path = output_dir / "imputation_audit.csv"
+        pd.concat(all_audits, ignore_index=True).to_csv(audit_path, index=False)
+        print(f"  ✓ {audit_path.name}")
 
 
 def print_summary(summary_stats: dict) -> None:
@@ -407,14 +490,14 @@ def main() -> None:
     parser.add_argument(
         "--model-path",
         type=str,
-        default="models/best_model_rf_full.pkl",
+        default=None,
         help="Path to trained model (relative to Dataset-Cr-HERA2.0)",
     )
     parser.add_argument(
         "--scaler-path",
         type=str,
-        default="models/best_model_scaler_full.pkl",
-        help="Path to scaler (relative to Dataset-Cr-HERA2.0)",
+        default=None,
+        help="Optional path to scaler (if omitted, inferred from metadata)",
     )
     args = parser.parse_args()
     
@@ -422,21 +505,34 @@ def main() -> None:
     
     # Resolve model path from Testing-MWQ's parent (Dataset-Cr-HERA2.0)
     base_dir = data_dir.parent.parent
-    model_path = base_dir / args.model_path
-    scaler_path = base_dir / args.scaler_path
+    if args.model_path:
+        model_path = base_dir / args.model_path
+    else:
+        best_meta_path = base_dir / "models" / "best_model_metadata.json"
+        if best_meta_path.exists():
+            with open(best_meta_path, "r", encoding="utf-8") as f:
+                best_meta = json.load(f)
+            model_name = best_meta.get("model_name", best_meta.get("model_type", "rf"))
+            scenario = best_meta.get("scenario", "full")
+            model_path = base_dir / "models" / f"best_model_{model_name}_{scenario}.pkl"
+            if not model_path.exists():
+                model_path = base_dir / "models" / f"model_{model_name}_{scenario}.pkl"
+        else:
+            model_path = base_dir / "models" / "best_model_rf_full.pkl"
+    scaler_path = base_dir / args.scaler_path if args.scaler_path else None
     
     output_dir = data_dir / "result"
     images_dir = data_dir / "images"
     
     # Load model
-    model, scaler = load_model(model_path, scaler_path)
-    
-    # Features expected by model
-    feature_cols = [
-        "EC", "TDS", "pH",
-        "Suhu Air (°C)", "Suhu Lingkungan (°C)",
-        "Kelembapan Lingkungan (%)", "Tegangan (V)"
-    ]
+    model, scaler, metadata = load_model(model_path, scaler_path)
+
+    feature_cols = metadata.get("features")
+    if not feature_cols:
+        raise ValueError(
+            "Model metadata does not define 'features'. "
+            "Please use model artifacts produced by the updated training pipeline."
+        )
     
     # Process all datasets
     print("=" * 70)
@@ -445,6 +541,7 @@ def main() -> None:
     
     data_list = []
     summary_stats = []
+    imputation_audits = []
     
     csv_files = sorted(data_dir.glob("dataset_*.csv"))
     
@@ -452,7 +549,7 @@ def main() -> None:
         dataset_name = csv_path.stem
         
         # Process
-        df = process_mwq_dataset(csv_path, dataset_name)
+        df, audit_df = process_mwq_dataset(csv_path, dataset_name, feature_cols)
         
         # Inference
         df = run_inference(model, scaler, df, feature_cols)
@@ -463,13 +560,14 @@ def main() -> None:
         summary_stats.append(stats)
         
         data_list.append((dataset_name, df))
+        imputation_audits.append((dataset_name, audit_df))
     
     # Generate plots
     plot_analysis(data_list, images_dir)
     
     # Save outputs
     print(f"\nSaving outputs to {output_dir}/...")
-    write_outputs(output_dir, data_list, summary_stats)
+    write_outputs(output_dir, data_list, summary_stats, imputation_audits)
     
     # Print summary
     print_summary(summary_stats)

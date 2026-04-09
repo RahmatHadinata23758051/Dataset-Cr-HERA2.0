@@ -7,8 +7,37 @@ dengan data sensor input real atau synthetic
 
 import pandas as pd
 import numpy as np
+import json
 from pathlib import Path
 from ml_pipeline_cr_soft_sensor import SoftSensorInference
+
+
+def resolve_default_artifacts():
+    """Resolve model/scaler using metadata produced by training pipeline."""
+    models_dir = Path("models")
+    metadata_path = models_dir / "best_model_metadata.json"
+
+    if metadata_path.exists():
+        with open(metadata_path, "r", encoding="utf-8") as f:
+            metadata = json.load(f)
+
+        model_name = metadata.get("model_name", metadata.get("model_type", "rf"))
+        scenario = metadata.get("scenario", "full")
+
+        model_path = models_dir / f"best_model_{model_name}_{scenario}.pkl"
+        if not model_path.exists():
+            model_path = models_dir / f"model_{model_name}_{scenario}.pkl"
+
+        scaler_name = metadata.get("scaler_path")
+        scaler_path = models_dir / scaler_name if scaler_name else None
+        if scaler_path is not None and not scaler_path.exists():
+            scaler_path = None
+
+        return model_path, scaler_path
+
+    model_path = models_dir / "best_model_rf_full.pkl"
+    legacy_scaler = models_dir / "best_model_scaler_full.pkl"
+    return model_path, legacy_scaler
 
 # ============================================================================
 # EXAMPLE 1: Single Prediction from Dict
@@ -20,10 +49,8 @@ def example_single_prediction():
     print("="*70)
     
     # Load model
-    sensor = SoftSensorInference(
-        'models/best_model_rf_full.pkl',
-        'models/best_model_scaler_full.pkl'
-    )
+    model_path, scaler_path = resolve_default_artifacts()
+    sensor = SoftSensorInference(str(model_path), str(scaler_path) if scaler_path else None)
     
     # Sensor input (contoh data dari sensor di lapangan)
     sensor_input = {
@@ -57,10 +84,8 @@ def example_batch_prediction():
     print("="*70)
     
     # Load model
-    sensor = SoftSensorInference(
-        'models/best_model_rf_full.pkl',
-        'models/best_model_scaler_full.pkl'
-    )
+    model_path, scaler_path = resolve_default_artifacts()
+    sensor = SoftSensorInference(str(model_path), str(scaler_path) if scaler_path else None)
     
     # Create sample sensor data (simulasi multiple sensor readings)
     sample_data = pd.DataFrame({
@@ -101,10 +126,8 @@ def example_timeseries_simulation():
     print("="*70)
     
     # Load model
-    sensor = SoftSensorInference(
-        'models/best_model_rf_full.pkl',
-        'models/best_model_scaler_full.pkl'
-    )
+    model_path, scaler_path = resolve_default_artifacts()
+    sensor = SoftSensorInference(str(model_path), str(scaler_path) if scaler_path else None)
     
     # Simulate hourly sensor readings (24 jam)
     np.random.seed(42)
@@ -149,23 +172,21 @@ def example_timeseries_simulation():
 
 
 # ============================================================================
-# EXAMPLE 4: Comparison with Real Data (if available)
+# EXAMPLE 4: Demo Sanity Check (Not Independent Benchmark)
 # ============================================================================
 
 def example_comparison_with_real_data():
     print("="*70)
-    print("EXAMPLE 4: Test Set Validation")
+    print("EXAMPLE 4: Demo Sanity Check (Bukan Benchmark Utama)")
     print("="*70)
     
     from sklearn.metrics import mean_absolute_error, mean_squared_error
     
     # Load model
-    sensor = SoftSensorInference(
-        'models/best_model_rf_full.pkl',
-        'models/best_model_scaler_full.pkl'
-    )
+    model_path, scaler_path = resolve_default_artifacts()
+    sensor = SoftSensorInference(str(model_path), str(scaler_path) if scaler_path else None)
     
-    # Load test data (subset dari dataset untuk comparison)
+    # Demo ini hanya smoke/sanity check, bukan evaluasi independen benchmark.
     dataset = pd.read_csv('Dataset/Synthetic/synthetic_cr_dataset_v2_geochemical_with_category.csv')
     
     # Take first 20 samples as example
@@ -191,10 +212,11 @@ def example_comparison_with_real_data():
     display_cols = ['pH', 'EC', 'TDS', 'Cr', 'Cr_Predicted', 'Error', 'Pct_Error']
     print(test_df[display_cols].to_string(index=False))
     
-    print(f"\n📊 Validation Metrics:")
+    print(f"\n📊 Demo Metrics (interpretasi terbatas):")
     print(f"  MAE (Mean Absolute Error):     {mae:.4f} μg/L")
     print(f"  RMSE (Root Mean Square Error): {rmse:.4f} μg/L")
     print(f"  Mean % Error:                  {test_df['Pct_Error'].abs().mean():.2f}%")
+    print("  Catatan: gunakan file holdout/CV dari training pipeline sebagai metrik utama.")
     
     print("="*70 + "\n")
 

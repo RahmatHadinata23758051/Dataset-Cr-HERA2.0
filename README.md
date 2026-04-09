@@ -11,6 +11,28 @@ Project ini memiliki 2 versi hasil synthetic:
 1. `Dataset/Synthetic` (single-source, referensi utama GFQA_v3)
 2. `Dataset/Synthetic_Multisource` (gabungan beberapa dataset riil)
 
+## 1A. Status Evaluasi Model (Penting untuk Dibaca)
+
+Untuk menghindari salah tafsir, repo ini sekarang memakai pemisahan berikut:
+
+- **Smoke test / sanity check:** cek cepat apakah pipeline jalan tanpa error (bukan bukti akurasi ilmiah).
+- **Demo inference metrics:** output dari contoh inferensi (`example_soft_sensor_inference.py`) hanya ilustrasi penggunaan.
+- **Benchmark metrics (model selection):** metrik **cross-validation** pada split train saja (`results/model_benchmark_cv.csv`).
+- **Final model metrics:** metrik **holdout test** independen (`results/model_holdout_metrics.csv`).
+
+Definisi ringkas:
+
+- **Smoke test**: memastikan fungsi dasar berjalan.
+- **Demo**: menunjukkan cara pakai model di kode inferensi.
+- **Validation/CV**: evaluasi berulang untuk membandingkan kandidat model secara lebih stabil.
+- **Final holdout test**: evaluasi terakhir pada data yang tidak dipakai training maupun pemilihan model.
+
+Catatan penting:
+
+- Jangan gunakan metrik dari script demo sebagai klaim performa utama.
+- Klaim performa sebaiknya merujuk ke file hasil evaluasi pipeline training.
+- Jika ukuran dataset kecil, variance antar-fold CV bisa tetap tinggi; interpretasi harus hati-hati.
+
 ## 1A. Visualisasi Perbandingan Formula V1 vs V2
 
 Berikut visualisasi yang dihasilkan dari folder `image` untuk membandingkan formula synthetic Cr versi awal (V1) dan versi geochemical (V2).
@@ -55,17 +77,17 @@ Berikut plot hasil evaluasi model dari folder `results/plots`.
 ![Perbandingan prediksi antar model](results/plots/predictions_comparison.png)
 
 Penjelasan:
-- Plot ini membandingkan nilai prediksi Cr dari beberapa model terhadap data acuan.
-- Tujuannya melihat model mana yang paling konsisten mengikuti pola nilai sebenarnya.
-- Model yang kurvanya paling dekat terhadap referensi biasanya memiliki error lebih rendah.
+- Plot ini membandingkan nilai prediksi model terhadap data **holdout test**.
+- Plot ini bukan sumber tunggal pemilihan model; pemilihan utama tetap mengacu ke benchmark CV.
+- Gunakan bersama file `results/model_benchmark_cv.csv` dan `results/model_holdout_metrics.csv`.
 
 ### Plot 2 - Perbandingan Metrik Kinerja
 ![Perbandingan metrik kinerja model](results/plots/metrics_comparison.png)
 
 Penjelasan:
-- Menampilkan metrik evaluasi utama (misalnya `MAE`, `RMSE`, dan/atau `R2`) antar model.
-- Membantu memilih model terbaik secara objektif, tidak hanya dari visual kurva prediksi.
-- Plot ini melengkapi interpretasi pada tabel metrik di laporan hasil training.
+- Menampilkan metrik evaluasi utama antar model pada holdout test.
+- Pemilihan model terbaik dilakukan dari metrik benchmark CV (bukan dari demo inference).
+- Plot ini melengkapi tabel metrik di laporan training (`results/ml_results_report.txt`).
 
 ## 1C. Contoh Output Menjalankan `example_soft_sensor_inference.py`
 
@@ -113,10 +135,17 @@ Validation Metrics:
 ```
 
 Penjelasan output:
-- **Example 1 (single prediction):** menunjukkan cara inferensi satu data sensor real-time.
-- **Example 2 (batch prediction):** memproses beberapa baris data sekaligus dan merangkum statistik prediksi.
-- **Example 3 (time-series):** simulasi monitoring 24 jam untuk melihat dinamika Cr terhadap perubahan kondisi sensor.
-- **Example 4 (validation):** membandingkan prediksi vs nilai aktual untuk mengukur akurasi model (`MAE`, `RMSE`, dan error persentase).
+- **Example 1 (single prediction):** cara inferensi satu data sensor real-time.
+- **Example 2 (batch prediction):** inferensi beberapa baris data sekaligus.
+- **Example 3 (time-series):** simulasi monitoring 24 jam.
+- **Example 4 (demo sanity check):** cek cepat prediksi vs target pada subset kecil.
+
+Catatan ilmiah:
+
+- Example 4 **bukan** validasi utama dan tidak boleh dipakai sebagai benchmark final.
+- Metrik utama untuk pelaporan performa model harus diambil dari:
+  - `results/model_benchmark_cv.csv` (benchmark/model selection), dan
+  - `results/model_holdout_metrics.csv` (final independent holdout test).
 
 ## 1D. Catatan Testing Dataset Ekstrem dan Pipeline yang Digunakan
 
@@ -179,7 +208,8 @@ Ringkasan pipeline yang digunakan untuk file `code/test_model_behavior.py`:
   - simpan ke `results/testing/test_sensitivity_analysis.csv`.
 6. Stability check:
   - cek delta antar baris,
-  - deteksi spike saat perubahan output terlalu besar dibanding perubahan input.
+  - abaikan langkah input sangat kecil/duplikat yang memicu artifact rasio,
+  - bedakan `GENUINE_INSTABILITY` vs `DESIGN_ARTIFACT_NEAR_ZERO_DELTA`.
 7. Visualisasi ke `results/testing/plots/`:
   - scenario vs predicted Cr,
   - `EC vs Cr_predicted`,
@@ -201,6 +231,152 @@ Implementasi modular yang dipakai:
 - `main()`
 
 Catatan: evaluasi ini fokus pada **validasi perilaku model** (konsistensi, monotonic trend, stabilitas), bukan evaluasi akurasi klasik seperti RMSE/MAE.
+
+## 1E. Struktur Artefak Evaluasi dan Model
+
+Artefak hasil training sekarang dipisah agar reproducible dan tidak ambigu:
+
+- Hasil evaluasi:
+  - `results/model_benchmark_cv.csv`
+  - `results/model_holdout_metrics.csv`
+  - `results/model_comparison.csv`
+  - `results/ml_results_report.txt`
+
+- Model per-kandidat:
+  - `models/model_<model>_<scenario>.pkl`
+  - `models/model_<model>_<scenario>.scaler.pkl` (jika model butuh scaling)
+  - `models/model_<model>_<scenario>.metadata.json`
+
+- Alias backward compatibility:
+  - `models/best_model_<model>_<scenario>.pkl`
+  - `models/best_model_scaler_<model>_<scenario>.pkl`
+  - `models/best_model_metadata.json` (legacy fallback)
+
+## 1F. Plot Behavior Testing Terbaru (`results/testing/plots`)
+
+Gambar berikut adalah plot yang dihasilkan dari pipeline behavior validation terbaru.
+
+### Plot 1 - Scenario Predictions Boxplot
+![Scenario Predictions Boxplot](results/testing/plots/scenario_predictions_boxplot.png)
+
+Tahap: **Behavior validation - scenario test**.
+Penjelasan singkat: memperlihatkan sebaran prediksi Cr pada tiap skenario (`Clean` sampai `Extreme`) untuk mengecek pemisahan level kontaminasi.
+
+### Plot 2 - Sensitivity EC Sweep
+![Sensitivity EC Sweep](results/testing/plots/sensitivity_ec_sweep.png)
+
+Tahap: **Behavior validation - sensitivity test (EC)**.
+Penjelasan singkat: menunjukkan respons model saat `EC` dinaikkan bertahap; dipakai untuk verifikasi tren positif `EC -> Cr`.
+
+### Plot 3 - Sensitivity TDS Sweep
+![Sensitivity TDS Sweep](results/testing/plots/sensitivity_tds_sweep.png)
+
+Tahap: **Behavior validation - sensitivity test (TDS)**.
+Penjelasan singkat: menunjukkan respons model terhadap perubahan `TDS`; dipakai untuk verifikasi tren positif `TDS -> Cr`.
+
+### Plot 4 - Sensitivity pH Sweep
+![Sensitivity pH Sweep](results/testing/plots/sensitivity_ph_sweep.png)
+
+Tahap: **Behavior validation - sensitivity test (pH)**.
+Penjelasan singkat: memeriksa arah pengaruh pH terhadap Cr; dipakai untuk verifikasi tren negatif `pH -> Cr` (semakin basa, Cr cenderung menurun).
+
+## 1G. Visualisasi MWQ Terbaru (`Dataset/Testing-MWQ/images`)
+
+Berikut seluruh gambar analisis MWQ yang dibuat dari script terbaru.
+
+### MWQ 01 - Distribusi Prediksi Cr
+![MWQ 01](Dataset/Testing-MWQ/images/01_cr_distribution_histogram.png)
+
+Tahap: **MWQ inference - overview distribusi**.
+Penjelasan singkat: histogram global prediksi Cr untuk seluruh dataset MWQ, dipakai untuk melihat pusat data, rentang, dan potensi outlier.
+
+### MWQ 02 - EC vs Predicted Cr
+![MWQ 02](Dataset/Testing-MWQ/images/02_ec_vs_cr_scatter.png)
+
+Tahap: **MWQ inference - relasi fitur utama**.
+Penjelasan singkat: scatter hubungan `EC` dan prediksi Cr per dataset, untuk mengecek konsistensi arah tren antar-sumber data.
+
+### MWQ 03 - pH vs Predicted Cr
+![MWQ 03](Dataset/Testing-MWQ/images/03_ph_vs_cr_scatter.png)
+
+Tahap: **MWQ inference - relasi pH**.
+Penjelasan singkat: scatter hubungan pH dan prediksi Cr, membantu melihat apakah pola geokimia (pengaruh keasaman) tetap muncul pada data real.
+
+### MWQ 04 - TDS vs Predicted Cr
+![MWQ 04](Dataset/Testing-MWQ/images/04_tds_vs_cr_scatter.png)
+
+Tahap: **MWQ inference - relasi TDS**.
+Penjelasan singkat: memvisualisasikan korelasi `TDS` terhadap prediksi Cr sebagai pemeriksaan domain consistency.
+
+### MWQ 05 - Temperature vs Predicted Cr
+![MWQ 05](Dataset/Testing-MWQ/images/05_temperature_vs_cr_scatter.png)
+
+Tahap: **MWQ inference - variabel lingkungan**.
+Penjelasan singkat: mengecek apakah temperatur memunculkan pola ekstrem yang tidak realistis pada prediksi Cr.
+
+### MWQ 06 - Boxplot Prediksi per Dataset
+![MWQ 06](Dataset/Testing-MWQ/images/06_dataset_boxplot.png)
+
+Tahap: **MWQ inference - perbandingan antar dataset**.
+Penjelasan singkat: membandingkan median, IQR, dan sebaran prediksi Cr tiap dataset untuk menilai stabilitas antar-sumber.
+
+### MWQ 07 - ORP vs Predicted Cr
+![MWQ 07](Dataset/Testing-MWQ/images/07_orp_vs_cr_scatter.png)
+
+Tahap: **MWQ inference - analisis fitur tambahan**.
+Penjelasan singkat: menampilkan hubungan ORP terhadap prediksi Cr sebagai pemeriksaan perilaku model pada parameter redoks.
+
+### MWQ 08 - Correlation Heatmap
+![MWQ 08](Dataset/Testing-MWQ/images/08_correlation_heatmap.png)
+
+Tahap: **MWQ inference - ringkasan korelasi multivariat**.
+Penjelasan singkat: matriks korelasi antar fitur utama dan `Cr_predicted` untuk membaca dependensi global secara cepat.
+
+### MWQ 09 - Distribusi Parameter
+![MWQ 09](Dataset/Testing-MWQ/images/09_parameter_distributions.png)
+
+Tahap: **MWQ inference - quality check input/output**.
+Penjelasan singkat: distribusi tiap parameter sensor dan output prediksi, dipakai untuk cek rentang nilai dan potensi skew/outlier.
+
+### MWQ 10 - Rerata Prediksi per Dataset
+![MWQ 10](Dataset/Testing-MWQ/images/10_dataset_means_barplot.png)
+
+Tahap: **MWQ inference - agregasi hasil**.
+Penjelasan singkat: rata-rata prediksi Cr per dataset dengan error bar, membantu membandingkan level prediksi antar kelompok data.
+
+## 1H. Visualisasi MWQ Legacy (`Dataset/Testing-MWQ/result/plots`)
+
+Plot lama berikut tetap ditampilkan untuk jejak historis hasil.
+
+### Legacy 1 - Cr Distribution
+![Legacy Cr Distribution](Dataset/Testing-MWQ/result/plots/cr_distribution.png)
+
+Tahap: **MWQ legacy pipeline**.
+Penjelasan singkat: versi awal histogram distribusi prediksi Cr sebelum visualisasi diperluas.
+
+### Legacy 2 - EC vs Cr
+![Legacy EC vs Cr](Dataset/Testing-MWQ/result/plots/ec_vs_cr.png)
+
+Tahap: **MWQ legacy pipeline**.
+Penjelasan singkat: versi awal scatter `EC` terhadap prediksi Cr untuk referensi historis.
+
+### Legacy 3 - pH vs Cr
+![Legacy pH vs Cr](Dataset/Testing-MWQ/result/plots/ph_vs_cr.png)
+
+Tahap: **MWQ legacy pipeline**.
+Penjelasan singkat: versi awal scatter pH terhadap prediksi Cr.
+
+### Legacy 4 - TDS vs Cr
+![Legacy TDS vs Cr](Dataset/Testing-MWQ/result/plots/tds_vs_cr.png)
+
+Tahap: **MWQ legacy pipeline**.
+Penjelasan singkat: versi awal scatter `TDS` terhadap prediksi Cr.
+
+### Legacy 5 - Temperature vs Cr
+![Legacy Temperature vs Cr](Dataset/Testing-MWQ/result/plots/temperature_vs_cr.png)
+
+Tahap: **MWQ legacy pipeline**.
+Penjelasan singkat: versi awal scatter temperatur terhadap prediksi Cr untuk jejak historis sebelum analisis terstruktur.
 
 ## 2. Cara Dataset Synthetic Dibuat
 

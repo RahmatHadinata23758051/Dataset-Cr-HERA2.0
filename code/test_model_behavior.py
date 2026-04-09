@@ -11,6 +11,7 @@ Focus: Consistency, monotonic trends, stability - NOT accuracy metrics.
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import joblib
@@ -30,7 +31,35 @@ def load_model(model_path: Path, scaler_path: Path | None = None) -> tuple:
         print(f"Loading scaler from {scaler_path}...")
         scaler = joblib.load(scaler_path)
     
-    return model, scaler
+    metadata = load_metadata_for_model(model_path)
+    return model, scaler, metadata
+
+
+def load_metadata_for_model(model_path: Path) -> dict:
+    """Load metadata associated with the selected model artifact."""
+    metadata_candidates = [
+        model_path.with_suffix(".metadata.json"),
+        model_path.parent / "best_model_metadata.json",
+    ]
+    for metadata_path in metadata_candidates:
+        if metadata_path.exists():
+            with open(metadata_path, "r", encoding="utf-8") as f:
+                metadata = json.load(f)
+            print(f"Loading metadata from {metadata_path}...")
+
+            if metadata_path.name == "best_model_metadata.json":
+                # Prevent accidental global metadata mismatch for non-best aliases.
+                expected_stem = f"best_model_{metadata.get('model_name', metadata.get('model_type', 'rf'))}_{metadata.get('scenario', 'full')}"
+                if model_path.stem != expected_stem and model_path.stem != f"model_{metadata.get('model_name', metadata.get('model_type', 'rf'))}_{metadata.get('scenario', 'full')}":
+                    raise ValueError(
+                        f"Metadata-model mismatch: {metadata_path} indicates {expected_stem}, "
+                        f"but selected model is {model_path.name}."
+                    )
+            return metadata
+    raise FileNotFoundError(
+        f"No metadata found for model {model_path}. "
+        f"Expected one of: {[str(p) for p in metadata_candidates]}"
+    )
 
 
 def load_data(
@@ -56,7 +85,14 @@ def run_inference(
     """Run inference on test data and add predictions to dataframe."""
     print(f"Running inference on {len(data)} samples...")
     
-    x = data[feature_cols].values
+    missing_cols = [col for col in feature_cols if col not in data.columns]
+    if missing_cols:
+        raise ValueError(
+            f"Missing required feature columns: {missing_cols}. "
+            f"Available columns: {list(data.columns)}"
+        )
+
+    x = data[feature_cols].copy()
     
     # Scale if scaler exists
     if scaler:
@@ -193,9 +229,17 @@ def check_stability(sensitivity_df: pd.DataFrame) -> dict:
     print("=" * 70)
     
     stability_issues = []
+    summary_rows = []
+    ratio_threshold = 10.0
+    min_relative_input_change = 1e-4
     
     for sweep_var in ["EC", "TDS", "pH"]:
-        subset = sensitivity_df[sensitivity_df["Sweep_Variable"] == sweep_var].sort_values(sweep_var).reset_index(drop=True)
+        subset = (
+            sensitivity_df[sensitivity_df["Sweep_Variable"] == sweep_var]
+            .sort_values(sweep_var)
+            .drop_duplicates(subset=[sweep_var], keep="first")
+            .reset_index(drop=True)
+        )
         
         if len(subset) < 2:
             continue
@@ -203,39 +247,90 @@ def check_stability(sensitivity_df: pd.DataFrame) -> dict:
         # Calculate deltas
         input_delta = subset[sweep_var].diff().abs()
         output_delta = subset["Cr_predicted"].diff().abs()
-        
-        # Normalize by mean to detect disproportionate changes
+
+        # Normalize by mean to detect disproportionate changes and skip near-zero step artifacts
         input_mean = subset[sweep_var].mean()
         output_mean = subset["Cr_predicted"].mean()
-        
+        spike_count = 0
+        artifact_count = 0
+
         if input_mean > 0 and output_mean > 0:
-            relative_change_ratio = (output_delta / output_mean) / (input_delta / input_mean + 1e-6)
-            
-            # Flag if change ratio is very large (>10x)
-            spike_indices = relative_change_ratio > 10.0
-            
-            if spike_indices.any():
-                for idx in spike_indices[spike_indices].index:
+            rel_input_change = input_delta / input_mean
+            rel_output_change = output_delta / output_mean
+
+            valid_ratio_mask = rel_input_change >= min_relative_input_change
+            ratio = pd.Series(np.nan, index=subset.index, dtype=float)
+            ratio.loc[valid_ratio_mask] = rel_output_change.loc[valid_ratio_mask] / rel_input_change.loc[valid_ratio_mask]
+
+            spike_indices = ratio > ratio_threshold
+            artifact_indices = (~valid_ratio_mask) & output_delta.notna()
+
+            spike_count = int(spike_indices.fillna(False).sum())
+            artifact_count = int(artifact_indices.fillna(False).sum())
+
+            if spike_count > 0:
+                for idx in spike_indices[spike_indices.fillna(False)].index:
                     stability_issues.append({
                         "Sweep_Variable": sweep_var,
                         "Index": int(idx),
                         "Input_Delta": float(input_delta[idx]),
                         "Output_Delta": float(output_delta[idx]),
-                        "Change_Ratio": float(relative_change_ratio[idx]),
-                        "Status": "SPIKE",
+                        "Relative_Input_Change": float(rel_input_change[idx]),
+                        "Relative_Output_Change": float(rel_output_change[idx]),
+                        "Change_Ratio": float(ratio[idx]),
+                        "Classification": "GENUINE_INSTABILITY",
                     })
-        
-        # Print summary
-        spike_count = spike_indices.sum()
+
+            if artifact_count > 0:
+                for idx in artifact_indices[artifact_indices.fillna(False)].index:
+                    stability_issues.append({
+                        "Sweep_Variable": sweep_var,
+                        "Index": int(idx),
+                        "Input_Delta": float(input_delta[idx]),
+                        "Output_Delta": float(output_delta[idx]),
+                        "Relative_Input_Change": float(rel_input_change[idx]),
+                        "Relative_Output_Change": float(rel_output_change[idx]),
+                        "Change_Ratio": np.nan,
+                        "Classification": "DESIGN_ARTIFACT_NEAR_ZERO_DELTA",
+                    })
+
+        summary_rows.append(
+            {
+                "Sweep_Variable": sweep_var,
+                "Unique_Points": int(len(subset)),
+                "Genuine_Instability_Count": spike_count,
+                "Artifact_Count": artifact_count,
+                "Ratio_Threshold": ratio_threshold,
+                "Min_Relative_Input_Change": min_relative_input_change,
+            }
+        )
+
         status = f"✓ STABLE (no spikes)" if spike_count == 0 else f"✗ {spike_count} spikes detected"
+        if artifact_count > 0:
+            status = f"{status}; {artifact_count} near-zero-step artifacts ignored"
         print(f"{sweep_var:10s}: {status}")
-    
-    has_issues = len(stability_issues) > 0
-    
+
+    issues_df = pd.DataFrame(stability_issues) if stability_issues else pd.DataFrame(
+        columns=[
+            "Sweep_Variable",
+            "Index",
+            "Input_Delta",
+            "Output_Delta",
+            "Relative_Input_Change",
+            "Relative_Output_Change",
+            "Change_Ratio",
+            "Classification",
+        ]
+    )
+    summary_df = pd.DataFrame(summary_rows)
+
+    has_issues = (issues_df["Classification"] == "GENUINE_INSTABILITY").any() if not issues_df.empty else False
+
     return {
         "has_issues": has_issues,
-        "issues_df": pd.DataFrame(stability_issues) if stability_issues else None,
-        "issue_count": len(stability_issues),
+        "issues_df": issues_df,
+        "issue_count": int((issues_df["Classification"] == "GENUINE_INSTABILITY").sum()) if not issues_df.empty else 0,
+        "summary_df": summary_df,
     }
 
 
@@ -336,17 +431,14 @@ def write_outputs(
     )
     
     # Save stability report
-    if stability_results["issues_df"] is not None:
-        stability_results["issues_df"].to_csv(
-            output_dir / "stability_issues.csv",
-            index=False
-        )
-    else:
-        # Create empty report
-        pd.DataFrame([{"Status": "No stability issues detected"}]).to_csv(
-            output_dir / "stability_issues.csv",
-            index=False
-        )
+    stability_results["issues_df"].to_csv(
+        output_dir / "stability_issues.csv",
+        index=False
+    )
+    stability_results["summary_df"].to_csv(
+        output_dir / "stability_summary.csv",
+        index=False
+    )
     
     # Save full predictions
     scenario_df.to_csv(output_dir / "scenario_predictions_full.csv", index=False)
@@ -424,20 +516,35 @@ def main() -> None:
     parser.add_argument(
         "--model-path",
         type=str,
-        default="models/best_model_rf_full.pkl",
+        default=None,
         help="Path to trained model file",
     )
     parser.add_argument(
         "--scaler-path",
         type=str,
-        default="models/best_model_scaler_full.pkl",
+        default=None,
         help="Path to scaler file (optional)",
     )
     args = parser.parse_args()
     
     base_dir = Path(args.base_dir).resolve()
-    model_path = base_dir / args.model_path
-    scaler_path = base_dir / args.scaler_path
+
+    if args.model_path:
+        model_path = base_dir / args.model_path
+    else:
+        best_meta_path = base_dir / "models" / "best_model_metadata.json"
+        if best_meta_path.exists():
+            with open(best_meta_path, "r", encoding="utf-8") as f:
+                best_meta = json.load(f)
+            model_name = best_meta.get("model_name", best_meta.get("model_type", "rf"))
+            scenario = best_meta.get("scenario", "full")
+            model_path = base_dir / "models" / f"best_model_{model_name}_{scenario}.pkl"
+            if not model_path.exists():
+                model_path = base_dir / "models" / f"model_{model_name}_{scenario}.pkl"
+        else:
+            model_path = base_dir / "models" / "best_model_rf_full.pkl"
+
+    scaler_path = base_dir / args.scaler_path if args.scaler_path else None
     
     if not model_path.exists():
         raise FileNotFoundError(f"Model not found: {model_path}")
@@ -454,15 +561,16 @@ def main() -> None:
         raise FileNotFoundError(f"Sensitivity test not found: {sensitivity_path}")
     
     # Load
-    model, scaler = load_model(model_path, scaler_path)
+    model, scaler, metadata = load_model(model_path, scaler_path)
     scenario_df, sensitivity_df = load_data(scenario_path, sensitivity_path)
-    
-    # Features used by model
-    feature_cols = [
-        "EC", "TDS", "pH",
-        "Suhu Air (°C)", "Suhu Lingkungan (°C)",
-        "Kelembapan Lingkungan (%)", "Tegangan (V)"
-    ]
+
+    # Features used by the selected model
+    feature_cols = metadata.get("features")
+    if not feature_cols:
+        raise ValueError(
+            "Model metadata does not include 'features'. "
+            "Please retrain model using updated pipeline metadata format."
+        )
     
     # Run inference
     scenario_df = run_inference(model, scaler, scenario_df, feature_cols)
