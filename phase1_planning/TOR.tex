@@ -1,0 +1,526 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{setspace}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+
+\onehalfspacing
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.2}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{TOR HERA 2.0}
+\rhead{IoT Heavy Metal Monitoring}
+\cfoot{\thepage}
+
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection.}{0.5em}{}
+
+\begin{document}
+
+% =====================================================
+% COVER
+% =====================================================
+
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+
+    {\Large \textbf{TERM OF REFERENCE (TOR)}}\\[0.5cm]
+
+    {\LARGE \textbf{Pengembangan Sistem IoT Berbasis ESP32 untuk Deteksi}}\\[0.3cm]
+    {\LARGE \textbf{Parameter Logam Berat}}\\[0.3cm]
+    {\Large \textbf{Arsenik (As), Kadmium (Cd), Nikel (Ni),}}\\[0.2cm]
+    {\Large \textbf{Timbal (Pb), dan Kromium (Cr)}}\\[1.5cm]
+
+    \vfill
+
+    \begin{tabular}{ll}
+        \textbf{Project}         & : HERA 2.0 \\
+        \textbf{Versi Dokumen}   & : 1.1 \\
+        \textbf{Platform}        & : ESP32 + Web Dashboard \\
+        \textbf{Fokus Saat Ini}  & : Estimasi Konsentrasi Cr dan Ni \\
+        \textbf{Status}          & : Development Stage \\
+    \end{tabular}
+
+    \vfill
+
+    {\large 2026}
+
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% =====================================================
+% BAB 1
+% =====================================================
+
+\section{Deskripsi Sistem}
+
+HERA 2.0 merupakan pengembangan lanjutan dari sistem HERA 1.0 yang sebelumnya digunakan untuk monitoring parameter kualitas cairan berbasis sensor IoT. Pada versi terbaru ini, sistem dikembangkan menjadi platform monitoring parameter logam berat berbasis pendekatan \textit{soft sensor} menggunakan ESP32, integrasi multi-sensor, dashboard monitoring real-time, dan model AI untuk estimasi konsentrasi logam berat secara simultan.
+
+Fokus utama pengembangan tahap awal berada pada parameter \textbf{Kromium (Cr)} dan \textbf{Nikel (Ni)}, dengan pendekatan korelasi antara nilai sensor lingkungan dan perubahan karakteristik ion dalam cairan. Sistem tidak melakukan pembacaan logam berat tersebut secara langsung menggunakan sensor laboratorium khusus, melainkan menggunakan pendekatan estimasi berbasis data sensor fisis (\textit{soft sensor}).
+
+Sistem terdiri dari beberapa bagian utama yaitu:
+
+\begin{enumerate}
+    \item Perangkat IoT berbasis ESP32
+    \item Sensor lingkungan dan kualitas cairan (pH, EC, TDS, dan Suhu Air)
+    \item Web dashboard monitoring
+    \item Pipeline pengolahan data dan AI (Separate Model Approach untuk Cr dan Ni)
+    \item Database monitoring parameter cairan (InfluxDB)
+\end{enumerate}
+
+Pada pengembangan berikutnya, sistem dirancang untuk memperluas dukungannya ke parameter logam berat lain seperti Pb, As, dan Cd.
+
+% =====================================================
+% BAB 2
+% =====================================================
+
+\section{Pengembangan Sistem}
+
+Pengembangan sistem HERA 2.0 dilakukan sebagai peningkatan dari sistem sebelumnya dengan menambahkan kemampuan monitoring parameter ionik cairan dan pendekatan estimasi logam berat berbasis AI.
+
+\begin{longtable}{|p{4cm}|p{9cm}|}
+\hline
+\textbf{Pengembangan} & \textbf{Deskripsi} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Pengembangan} & \textbf{Deskripsi} \\
+\hline
+\endhead
+Integrasi ESP32 & ESP32 digunakan sebagai pusat pengolahan data sensor dan komunikasi IoT. \\
+\hline
+Penambahan Sensor & Sistem menggunakan sensor TDS, pH, DS18B20, dan DHT22 untuk membaca kondisi cairan dan lingkungan. \\
+\hline
+Dashboard Monitoring & Data sensor dikirim ke dashboard web secara real-time untuk monitoring dan logging data. \\
+\hline
+Model AI & Sistem menggunakan model machine learning terpisah untuk estimasi nilai Cr (Random Forest) dan Ni (XGBoost) berdasarkan parameter sensor. \\
+\hline
+Dataset & Penggunaan dataset sintetis terkalibrasi untuk Cr, dan integrasi dataset riil dari UNEP GEMS/Water Global Archive untuk pelatihan model Ni. \\
+\hline
+Soft Sensor Approach & Pendekatan estimasi logam berat dilakukan tanpa sensor Cr dan Ni khusus. \\
+\hline
+\end{longtable}
+
+% =====================================================
+% BAB 3
+% =====================================================
+
+\section{Arsitektur Sistem}
+
+Arsitektur sistem HERA 2.0 terdiri dari tiga lapisan utama yaitu:
+
+\begin{enumerate}
+    \item Layer Sensor dan Akuisisi Data
+    \item Layer Pengolahan Data dan AI
+    \item Layer Dashboard dan Monitoring
+\end{enumerate}
+
+\textbf{Keterangan:}
+
+\begin{itemize}
+    \item Sensor membaca parameter cairan secara periodik.
+    \item ESP32 melakukan pengambilan dan pengiriman data.
+    \item Data disimpan ke database.
+    \item Model AI melakukan estimasi konsentrasi Cr dan Ni secara independen (\textit{One-by-One Model}).
+    \item Dashboard menampilkan hasil monitoring secara real-time.
+\end{itemize}
+
+% =====================================================
+% BAB 4
+% =====================================================
+
+\section{Sensor dan Parameter Sistem}
+
+Sensor yang digunakan pada pengembangan HERA 2.0 disesuaikan dengan parameter yang memiliki hubungan terhadap perubahan ion dalam cairan.
+
+\begin{longtable}{|p{3cm}|p{4cm}|p{6cm}|}
+\hline
+\textbf{Sensor} & \textbf{Parameter} & \textbf{Fungsi dalam Sistem} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Sensor} & \textbf{Parameter} & \textbf{Fungsi dalam Sistem} \\
+\hline
+\endhead
+TDS Sensor & Total Dissolved Solid (mg/L) & Mengukur estimasi total zat terlarut berbasis perubahan ion cairan. \\
+\hline
+EC Sensor & Electrical Conductivity ($\mu$S/cm) & Mengukur konduktivitas listrik cairan sebagai indikator utama kandungan ion terlarut. Nilai TDS diturunkan dari EC menggunakan faktor konversi empiris $TDS = EC \times 0{,}64$. \\
+\hline
+pH Sensor & Derajat Keasaman & Mengukur kondisi kimia cairan yang mempengaruhi kelarutan ion logam. Kondisi lebih asam (pH rendah) cenderung meningkatkan kelarutan logam kationik seperti $Cr^{3+}$ dan $Ni^{2+}$ karena mencegah pengendapan hidroksida. \\
+\hline
+DS18B20 & Temperatur Air ($^{\circ}$C) & Mengukur suhu cairan untuk kompensasi perubahan pembacaan sensor. \\
+\hline
+DHT22 & Suhu Lingkungan ($^{\circ}$C) dan Kelembapan (\%) & Monitoring kondisi lingkungan sekitar perangkat. \\
+\hline
+ADC / Voltage & Tegangan (V) & Monitoring tegangan suplai perangkat IoT sebagai parameter tambahan sistem. \\
+\hline
+\end{longtable}
+
+% =====================================================
+% BAB 5
+% =====================================================
+
+\section{Pendekatan Estimasi Konsentrasi Cr dan Ni}
+
+Pada pengembangan HERA 2.0, estimasi dikembangkan menjadi multi-logam berat dengan target \textbf{Kromium (Cr)} dan \textbf{Nikel (Ni)}. Pendekatan dilakukan secara terpisah untuk setiap logam berat (\textit{Separate Model Approach} atau \textit{One-by-One Model}) untuk mengakomodasi perbedaan karakteristik termodinamika dan perilaku geokimiawi masing-masing logam.
+
+\subsection{Karakteristik Geokimiawi dan Korelasi Fisis}
+
+\begin{enumerate}
+    \item \textbf{Kromium (Cr):} Memiliki karakteristik ionik yang relatif stabil. Keberadaannya dalam perairan sangat dipengaruhi oleh tingkat keasaman (pH) dan kekuatan ionik air (diwakili oleh EC dan TDS).
+    \item \textbf{Nikel (Ni):} Dalam air, nikel dominan berada dalam bentuk kation divalent terlarut ($Ni^{2+}$). Kelarutan nikel sangat dipengaruhi secara eksponensial oleh pH air. Pada pH netral hingga basa (pH $> 8{,}0$), nikel cenderung mengendap menjadi nikel hidroksida ($Ni(OH)_2$) sesuai dengan konstanta hasil kali kelarutan termodinamikanya ($K_{sp} \approx 5{,}48 \times 10^{-16}$):
+    \begin{equation}
+    Ni^{2+} + 2OH^- \rightleftharpoons Ni(OH)_2(s)
+    \end{equation}
+    Pada pH asam (pH $< 6{,}5$), kelarutan nikel meningkat drastis, menjadikannya sangat mobile dalam bentuk ion bebas. Kenaikan konsentrasi $Ni^{2+}$ secara langsung berkontribusi pada peningkatan konduktivitas listrik cairan (EC) dan TDS. Oleh karena itu, pH, EC, dan TDS merupakan prediktor fisis yang sangat kuat untuk mengestimasi konsentrasi nikel terlarut secara non-destruktif.
+\end{enumerate}
+
+\subsection{Pendekatan Pemodelan Machine Learning}
+
+Pemodelan machine learning dilakukan secara \textit{One-by-One} untuk menghindari distorsi gradient path yang umum terjadi pada model multi-output dengan fitur target yang memiliki respon kelarutan berbeda. Algoritma kandidat yang digunakan adalah:
+
+\begin{enumerate}
+    \item \textbf{Linear Regression} --- sebagai baseline statistik sederhana.
+    \item \textbf{Random Forest Regression} --- model ensemble berbasis decision tree yang sangat baik untuk menangkap interaksi non-linear antar parameter.
+    \item \textbf{XGBoost (Extreme Gradient Boosting)} --- model boosting berkinerja tinggi yang dioptimalkan untuk meminimalkan loss function secara efisien, sangat cocok untuk memprediksi fluktuasi konsentrasi nikel dari data riil.
+\end{enumerate}
+
+Model terbaik dipilih berdasarkan evaluasi \textit{cross-validation benchmark} pada data training, dilanjutkan dengan pengujian pada \textit{holdout test set} independen untuk mengukur performa generalisasinya.
+
+\subsection{Sumber Data dan Metodologi Dataset}
+
+\begin{itemize}
+    \item \textbf{Dataset Cr:} Menggunakan pendekatan \textit{physics-informed synthetic dataset} yang dikalibrasi berdasarkan referensi ilmiah global.
+    \item \textbf{Dataset Ni:} Menggunakan data aktual/riil berskala global dari \textbf{UNEP GEMS/Water Global Freshwater Quality Archive}. Dataset riil ini menyediakan pasangan data terukur lapangan antara konsentrasi nikel terlarut (\textit{dissolved nickel}, Ni-Dis) dengan daya hantar listrik (Electrical Conductance/EC), pH, dan temperatur dari berbagai stasiun pemantauan dunia. Hal ini memberikan dasar ilmiah yang jauh lebih kuat dan representatif dibandingkan sekadar data sintetis.
+\end{itemize}
+
+% =====================================================
+% BAB 6
+% =====================================================
+
+\section{Perumusan dan Korelasi Parameter}
+
+Hubungan parameter sensor terhadap estimasi konsentrasi masing-masing logam berat diformulasikan melalui fungsi regresi non-linear multivariabel yang terpisah untuk Kromium ($Cr$) dan Nikel ($Ni$):
+
+\begin{equation}
+Cr = f(EC,\ TDS,\ pH,\ T_{air},\ T_{lingk},\ RH,\ V) + \epsilon_{Cr}
+\end{equation}
+
+\begin{equation}
+Ni = g(EC,\ TDS,\ pH,\ T_{air},\ T_{lingk},\ RH,\ V) + \epsilon_{Ni}
+\end{equation}
+
+dengan keterangan parameter:
+\begin{itemize}
+    \item $EC$ = Electrical Conductivity ($\mu$S/cm)
+    \item $TDS$ = Total Dissolved Solid (mg/L), diturunkan secara empiris: $TDS = EC \times 0{,}64$
+    \item $pH$ = derajat keasaman cairan yang memodulasi spesiasi logam terlarut
+    \item $T_{air}$ = suhu air ($^{\circ}$C) yang mengontrol konstanta kelarutan termodinamika ($K_{sp}$)
+    \item $T_{lingk}$ = suhu lingkungan ($^{\circ}$C)
+    \item $RH$ = kelembapan lingkungan (\%)
+    \item $V$ = tegangan catu daya perangkat IoT (V)
+    \item $\epsilon_{Cr}, \epsilon_{Ni}$ = residual error masing-masing model
+\end{itemize}
+
+Arah korelasi teoretis geokimiawi untuk penentuan validitas model:
+\begin{itemize}
+    \item \textbf{Arah Korelasi Kromium (Cr):}
+    \begin{itemize}
+        \item $EC \rightarrow Cr$ dan $TDS \rightarrow Cr$: Korelasi \textbf{positif}.
+        \item $pH \rightarrow Cr$: Korelasi \textbf{negatif} (peningkatan alkalinitas menurunkan mobilitas Cr terlarut).
+    \end{itemize}
+    \item \textbf{Arah Korelasi Nikel (Ni):}
+    \begin{itemize}
+        \item $EC \rightarrow Ni$ dan $TDS \rightarrow Ni$: Korelasi \textbf{positif} kuat ($Ni^{2+}$ terlarut menyumbangkan kation yang menaikkan konduktivitas listrik).
+        \item $pH \rightarrow Ni$: Korelasi \textbf{negatif} kuat (pH $< 6{,}5$ mencegah pembentukan endapan $Ni(OH)_2$ dan menggeser kesetimbangan ke arah pembentukan kation bebas $Ni^{2+}$ terlarut).
+    \end{itemize}
+\end{itemize}
+
+Korelasi antar parameter dianalisis menggunakan Pearson Correlation untuk tahap preprocessing, dan Spearman Correlation untuk validasi perilaku model (\textit{behavior validation}):
+
+\begin{equation}
+r_s = 1 - \frac{6\sum d_i^2}{n(n^2-1)}
+\end{equation}
+
+dengan $d_i$ adalah selisih peringkat antara dua variabel dan $n$ adalah jumlah observasi.
+
+Untuk evaluasi performa model digunakan metrik RMSE, MAE, dan $R^2$:
+
+\begin{equation}
+RMSE = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2}
+\end{equation}
+
+\begin{equation}
+MAE = \frac{1}{n}\sum_{i=1}^{n}|y_i - \hat{y}_i|
+\end{equation}
+
+\begin{equation}
+R^2 = 1 - \frac{\sum (y_i-\hat{y}_i)^2}{\sum (y_i-\bar{y})^2}
+\end{equation}
+
+% =====================================================
+% BAB 7
+% =====================================================
+
+\section{Arsitektur Development Model AI}
+
+Arsitektur pengembangan model AI pada HERA 2.0 mengikuti pipeline machine learning standar yang mencakup dua pipeline utama yang dijalankan secara paralel untuk Cr dan Ni.
+
+\textbf{Pipeline 1 --- Training, Evaluasi, dan Deployment:}
+
+\begin{longtable}{|p{4.2cm}|p{8.3cm}|}
+\hline
+\textbf{Tahapan} & \textbf{Deskripsi} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Tahapan} & \textbf{Deskripsi} \\
+\hline
+\endhead
+Define Problem & Estimasi konsentrasi Cr dan Ni ($\mu$g/L) menggunakan pendekatan \textit{soft sensor} berbasis regresi multivariabel. \\
+\hline
+Dataset Collection & Dataset sintetis terkalibrasi untuk Cr, dan dataset riil historis dari GEMS/Water UNEP (berisi data aktual stasiun pemantauan global) untuk Ni. \\
+\hline
+Data Preprocessing & Penggabungan data Ni terlarut dan daya hantar listrik (EC) berdasarkan kesamaan stasiun ID (\textit{Station ID}) dan waktu pengamatan (\textit{Time}), penanganan data hilang, dan normalisasi fitur. \\
+\hline
+Feature Analysis & Analisis korelasi Pearson dan visualisasi sebaran geokimiawi untuk memvalidasi korelasi fisis pra-pemodelan. \\
+\hline
+Model Training & Pelatihan model regresi terpisah untuk Cr (Random Forest) dan Ni (XGBoost, Random Forest, SVR) menggunakan parameter sensor fisis. \\
+\hline
+Model Selection & Evaluasi berulang menggunakan $k$-fold cross-validation pada data training. Model terbaik dipilih berdasarkan kinerja komparatif. \\
+\hline
+Final Evaluation & Evaluasi performa akhir model terpilih menggunakan metrik RMSE, MAE, dan $R^2$ pada data \textit{holdout test} independen. \\
+\hline
+Deployment & Penyimpanan model final sebagai file serialisasi binary (\texttt{.pkl}) untuk diintegrasikan ke backend inferensi real-time. \\
+\hline
+\end{longtable}
+
+\textbf{Pipeline 2 --- Behavior Validation:}
+
+Setelah model dilatih, validasi perilaku fisis model wajib dilakukan untuk memastikan model tidak hanya menghafal data melainkan mencerminkan hukum alam geokimiawi:
+
+\begin{enumerate}
+    \item \textbf{Scenario Test} --- Pengujian model pada data uji terstruktur dengan 4 tingkat kondisi: \textit{Clean} $\rightarrow$ \textit{Moderately Polluted} $\rightarrow$ \textit{Highly Polluted} $\rightarrow$ \textit{Extreme}. Model dinyatakan \texttt{PASS} jika estimasi konsentrasi logam meningkat secara monoton seiring meningkatnya tingkat polusi skenario.
+    \item \textbf{Sensitivity Test} --- Pengujian sensitivitas arah hubungan menggunakan korelasi Spearman. Model dinyatakan valid secara fisik jika respon prediksi terhadap variabel input fisis menunjukkan arah yang benar (EC/TDS searah, pH berlawanan arah).
+\end{enumerate}
+
+% =====================================================
+% BAB 8
+% =====================================================
+
+\section{Dashboard Monitoring}
+
+Dashboard HERA 2.0 digunakan untuk monitoring data sensor fisis dan hasil estimasi model AI logam berat secara real-time dan simultan.
+
+Fitur dashboard meliputi:
+\begin{enumerate}
+    \item Monitoring nilai sensor real-time (EC, TDS, pH, Suhu Air).
+    \item Visualisasi grafik tren parameter secara temporal.
+    \item Monitoring estimasi simultan logam berat \textbf{Cr} dan \textbf{Ni}.
+    \item Logging data sensor secara periodik ke dalam time-series database.
+    \item Status konektivitas perangkat IoT (ESP32).
+    \item Alarm peringatan otomatis jika estimasi konsentrasi logam berat melebihi ambang batas baku mutu WHO (Cr $> 50\,\mu$g/L dan Ni $> 20\,\mu$g/L).
+\end{enumerate}
+
+Dashboard dirancang berbasis web modern (responsive) agar dapat diakses melalui desktop maupun perangkat mobile.
+
+% =====================================================
+% BAB 9
+% =====================================================
+
+\section{Target Pengembangan}
+
+Target pengembangan sistem HERA 2.0 dibagi menjadi dua tahap utama.
+
+\subsection{Tahap Saat Ini}
+\begin{itemize}
+    \item Estimasi simultan parameter Kromium (Cr) dan Nikel (Ni).
+    \item Integrasi data aktual global dari UNEP GEMS/Water Archive untuk parameter Ni.
+    \item Pengembangan model machine learning terpisah (Random Forest dan XGBoost) dengan performa generalisasi tinggi.
+    \item Analisis korelasi geokimiawi dan pengujian sensitivitas Spearman.
+    \item Integrasi dashboard pemantauan ganda pada web interface.
+\end{itemize}
+
+\subsection{Tahap Selanjutnya}
+\begin{itemize}
+    \item Penambahan parameter logam berat kationik lainnya seperti Timbal (Pb) dan Kadmium (Cd).
+    \item Pengambilan data uji coba laboratorium lokal untuk fine-tuning model.
+    \item Validasi model AI menggunakan data sampel perairan lokal Indonesia.
+    \item Integrasi notifikasi peringatan berbasis Telegram atau Email.
+    \item Pengembangan mobile application native.
+\end{itemize}
+
+% =====================================================
+% BAB 10
+% =====================================================
+
+\section{Kesimpulan}
+
+HERA 2.0 merupakan lompatan teknologi penting dari sistem pemantauan kualitas air konvensional ke arah estimasi multi-parameter logam berat secara simultan berbasis \textit{soft sensor} dan machine learning. Fokus tahap ini adalah keberhasilan estimasi Kromium (Cr) dan Nikel (Ni) menggunakan prediktor fisis sederhana (pH, EC, TDS, dan Suhu Air).
+
+Dengan memadukan model machine learning terpisah yang disesuaikan dengan karakteristik kelarutan kimia logam (kationik $Ni^{2+}$ vs. spesies $Cr$), sistem dapat menghasilkan tingkat akurasi yang optimal tanpa memerlukan sensor perangkat keras berspesifikasi tinggi yang mahal.
+
+Hasil estimasi ini diharapkan dapat menjadi sistem peringatan dini (\textit{early warning system}) pencemaran air industri yang andal, ekonomis, dan mudah diimplementasikan secara luas.
+% =====================================================
+% BAB 11
+% =====================================================
+\section{Metode Pengujian}
+
+\subsection{Pengujian Model (Evaluasi Internal)}
+
+Pengujian model dilakukan secara bertahap dalam dua level evaluasi yang terpisah untuk menghindari bias pemilihan model.
+
+\begin{enumerate}
+    \item \textbf{Cross-Validation Benchmark} --- evaluasi berulang menggunakan $k$-fold cross-validation pada data training untuk membandingkan kandidat model (Linear Regression, Random Forest, SVR). Hasil disimpan di \texttt{results/model\_benchmark\_cv.csv}.
+    \item \textbf{Holdout Test Final} --- evaluasi akhir pada data uji independen yang tidak digunakan selama training maupun pemilihan model. Hasil disimpan di \texttt{results/model\_holdout\_metrics.csv}.
+\end{enumerate}
+
+Parameter evaluasi model:
+
+\begin{enumerate}
+    \item Akurasi estimasi konsentrasi Cr dan Ni ($\mu$g/L) secara simultan.
+    \item MAE (\textit{Mean Absolute Error}) masing-masing model.
+    \item RMSE (\textit{Root Mean Square Error}) masing-masing model.
+    \item Koefisien determinasi $R^2$ masing-masing model.
+    \item Validasi perilaku model: konsistensi skenario (\texttt{PASS/FAIL}) dan kesesuaian arah tren Spearman (EC/TDS positif, pH negatif).
+    \item Stabilitas estimasi antar baris data temporal (\textit{stability check}).
+\end{enumerate}
+
+\subsection{Pengujian Laboratorium}
+
+Pengujian laboratorium dilakukan dengan membandingkan hasil estimasi sistem IoT terhadap metode rujukan laboratorium (AAS, ICP-OES, atau spektrofotometri). Pengujian ini merupakan tahap validasi lanjutan setelah model sintetis dioptimalkan.
+
+Parameter pengujian:
+
+\begin{enumerate}
+    \item Akurasi estimasi konsentrasi Cr dan Ni terhadap hasil uji spektrofotometri atau AAS laboratorium.
+    \item MAE dan RMSE terhadap data referensi uji laboratorium.
+    \item Korelasi Pearson antara prediksi sistem dan hasil riil laboratorium.
+    \item Stabilitas dan repeatability pembacaan sensor pada sampel air statis.
+    \item Reproducibility hasil prediksi antar sesi pengujian yang berbeda.
+\end{enumerate}
+
+\subsection{Pengujian Lapangan}
+
+Pengujian lapangan dilakukan pada beberapa titik sampel air setelah sistem terkalibrasi. Setiap titik pengujian dilakukan minimal tiga kali pembacaan.
+
+Data yang dikumpulkan:
+
+\begin{enumerate}
+    \item Nilai sensor pendukung (EC, TDS, pH, suhu air, suhu lingkungan, kelembapan, tegangan).
+    \item Estimasi konsentrasi Cr dan Ni dari masing-masing model.
+    \item Lokasi geospasial dan stempel waktu pengambilan sampel.
+    \item Kondisi cuaca dan iklim makro saat pengujian di lapangan.
+    \item Hasil uji laboratorium sebagai acuan kebenaran (*ground truth*).
+\end{enumerate}
+
+% =====================================================
+% BAB 12
+% =====================================================
+\section{Indikator Keberhasilan}
+
+\begin{longtable}{|p{0.5cm}|p{5.5cm}|p{6cm}|}
+\hline
+\textbf{No} & \textbf{Indikator} & \textbf{Target} \\
+\hline
+\endfirsthead
+\hline
+\textbf{No} & \textbf{Indikator} & \textbf{Target} \\
+\hline
+\endhead
+1 & Pembacaan sensor pendukung & Berhasil membaca EC, TDS, pH, suhu air, suhu lingkungan, kelembapan, dan tegangan secara berkala. \\
+\hline
+2 & Estimasi konsentrasi logam & Model mampu mengestimasi konsentrasi Cr dan Ni ($\mu$g/L) secara terpisah dari fitur sensor. \\
+\hline
+3 & Pengiriman data IoT & Data sensor fisis terkirim ke server dengan tingkat keberhasilan $\geq$ 95\%. \\
+\hline
+4 & Latensi pengiriman data & $\leq$ 5 detik dari akuisisi sensor hingga penampilan di dashboard pada jaringan stabil. \\
+\hline
+5 & Performa model Cr (holdout test) & RMSE $\leq$ 5 $\mu$g/L dan $R^2 \geq$ 0{,}85 pada holdout test Cr. \\
+\hline
+6 & Performa model Ni (holdout test) & RMSE $\leq$ 15 $\mu$g/L dan $R^2 \geq$ 0{,}80 pada holdout test Ni menggunakan data riil GEMS. \\
+\hline
+7 & Validasi perilaku model & Scenario test \texttt{PASS}: prediksi Cr dan Ni meningkat monoton dari \textit{Clean} ke \textit{Extreme}. Arah tren Spearman valid (EC/TDS positif, pH negatif). \\
+\hline
+8 & Stabilitas prediksi & Deviasi prediksi pada pembacaan berulang dengan sampel air yang sama $\leq$ 10\%. \\
+\hline
+9 & Akurasi terhadap data laboratorium & $\geq$ 75\% pada uji validasi lapangan awal terhadap data referensi laboratorium. \\
+\hline
+10 & Dashboard monitoring & Menampilkan data real-time, grafik historis, estimasi simultan Cr dan Ni, status perangkat, dan alarm batas bahaya baku mutu. \\
+\hline
+11 & Dokumentasi sistem & Tersedia kode pelatihan model (\texttt{.pkl}), script preprocessing data riil GEMS, firmware ESP32, dataset gabungan, dan SOP pengujian. \\
+\hline
+\end{longtable}
+
+% =====================================================
+% BAB 13
+% =====================================================
+\section{Luaran Kegiatan}
+
+Luaran kegiatan meliputi:
+
+\begin{enumerate}
+    \item Purwarupa perangkat IoT berbasis ESP32.
+    \item Sistem sensor pendukung kualitas air (EC, TDS, pH, suhu air, suhu lingkungan, kelembapan, tegangan).
+    \item Model machine learning terpisah untuk estimasi konsentrasi Cr (Random Forest) dan Ni (XGBoost) berbasis soft sensor (\texttt{.pkl}).
+    \item Dataset pengujian terpadu (dataset sintetis untuk Cr dan dataset riil terbersih UNEP GEMS/Water untuk Ni).
+    \item Pipeline evaluasi model: cross-validation benchmark dan holdout test independen untuk masing-masing model logam berat.
+    \item Pipeline validasi perilaku geokimiawi model: scenario test dan sensitivity test arah Spearman.
+    \item Dashboard monitoring kualitas air berbasis web (real-time, grafik multi-logam berat, alarm batas mutu).
+    \item Database historis hasil pengukuran sensor dan estimasi model (InfluxDB).
+    \item SOP kalibrasi sensor fisis dan pengambilan sampel air lapangan.
+    \item Laporan pengujian model, validasi laboratorium, dan monitoring lapangan.
+    \item Dokumentasi teknis lengkap dan draft artikel ilmiah bertaraf internasional.
+\end{enumerate}
+% =====================================================
+% REFERENCES
+% =====================================================
+
+\begin{thebibliography}{99}
+
+\bibitem{hera}
+HERA 2.0 Internal Development Documentation, 2026.
+
+\bibitem{pearson}
+Pearson, K. (1895). Notes on regression and inheritance in the case of two parents. \textit{Proceedings of the Royal Society of London}, 58, 240--242.
+
+\bibitem{esp32}
+Espressif Systems. (2023). \textit{ESP32 Technical Reference Manual}. Espressif Systems.
+
+\bibitem{tds}
+American Public Health Association. (2017). \textit{Standard Methods for the Examination of Water and Wastewater} (23rd ed.). APHA Press.
+
+\bibitem{chromium}
+World Health Organization. (2022). \textit{Guidelines for Drinking-water Quality} (4th ed., incorporating 1st and 2nd addenda). WHO.
+
+\bibitem{nickel}
+World Health Organization. (2021). \textit{Nickel in Drinking-water}. Background document for development of WHO Guidelines for Drinking-water Quality (WHO/HEP/ECH/WSH/2021.6). WHO.
+
+\bibitem{gems}
+UNEP GEMS/Water. (2026). \textit{Global Freshwater Quality Archive}. United Nations Environment Programme.
+
+\bibitem{geochemistry}
+Scientific Reports Paper (PMC11681121). \textit{Evaluation of heavy metal correlations and pH-dependence in industrial watersheds}. Nature Scientific Reports, 14, 25412 (2024).
+
+\end{thebibliography}
+
+\end{document}

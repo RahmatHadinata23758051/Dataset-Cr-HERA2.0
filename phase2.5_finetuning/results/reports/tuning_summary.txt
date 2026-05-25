@@ -1,0 +1,24 @@
+======================================================================
+  HERA 2.0 Phase 2.5 — Hyperparameter Tuning Summary
+  Optuna TPE | 100 trials | 5-Fold CV | Seed=42
+  Dataset    : dataset_heavy_metal_grounded_v2.csv (15,000 samples)
+  Features   : 9 (pH, EC_uScm, TDS_mgL, Suhu_Air, pH_squared, pH_EC_interact, log_EC, pOH_proxy, pH_temp_interact)
+  Total time : 18.7 minutes
+======================================================================
+
+  Model              | Metal      | CV R2 (mean +/- std)
+  ------------------------------------------------------------------
+  Random Forest      | Chromium   | CV R2 = 0.99101 +/- 0.00027  (473s)
+  Random Forest      | Nickel     | CV R2 = 0.98938 +/- 0.00086  (467s)
+  XGBoost            | Chromium   | CV R2 = 0.99111 +/- 0.00045  (80s)
+  XGBoost            | Nickel     | CV R2 = 0.98875 +/- 0.00068  (89s)
+
+  Improvement vs Baseline (Phase 2 original):
+  ------------------------------------------------------------------
+    Random Forest      | Chromium   | v1 Test R2=0.9587  ->  v2 CV R2=0.99101  (++3.23%)
+    Random Forest      | Nickel     | v1 Test R2=0.9446  ->  v2 CV R2=0.98938  (++4.48%)
+    XGBoost            | Chromium   | v1 Test R2=0.9650  ->  v2 CV R2=0.99111  (++2.61%)
+    XGBoost            | Nickel     | v1 Test R2=0.9479  ->  v2 CV R2=0.98875  (++4.09%)
+
+  Next step: Run train_models_v2.py (Area 3) to retrain with best params
+======================================================================

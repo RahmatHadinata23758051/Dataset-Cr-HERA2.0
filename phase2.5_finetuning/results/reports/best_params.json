@@ -1,0 +1,104 @@
+{
+  "Random_Forest_Chromium": {
+    "model": "Random Forest",
+    "metal": "Chromium",
+    "best_cv_r2": 0.991013,
+    "cv_r2_mean": 0.991013,
+    "cv_r2_std": 0.000271,
+    "cv_r2_folds": [
+      0.991416,
+      0.991236,
+      0.990933,
+      0.990775,
+      0.990707
+    ],
+    "n_trials": 100,
+    "elapsed_sec": 472.6,
+    "best_params": {
+      "n_estimators": 291,
+      "max_depth": 8,
+      "min_samples_leaf": 3,
+      "min_samples_split": 5,
+      "max_features": "sqrt",
+      "ccp_alpha": 0.01461397722058417
+    }
+  },
+  "Random_Forest_Nickel": {
+    "model": "Random Forest",
+    "metal": "Nickel",
+    "best_cv_r2": 0.989376,
+    "cv_r2_mean": 0.989376,
+    "cv_r2_std": 0.000864,
+    "cv_r2_folds": [
+      0.989558,
+      0.989364,
+      0.990886,
+      0.988574,
+      0.988497
+    ],
+    "n_trials": 100,
+    "elapsed_sec": 466.8,
+    "best_params": {
+      "n_estimators": 194,
+      "max_depth": 8,
+      "min_samples_leaf": 3,
+      "min_samples_split": 6,
+      "max_features": "sqrt",
+      "ccp_alpha": 0.005783303332437837
+    }
+  },
+  "XGBoost_Chromium": {
+    "model": "XGBoost",
+    "metal": "Chromium",
+    "best_cv_r2": 0.991106,
+    "cv_r2_mean": 0.991106,
+    "cv_r2_std": 0.000449,
+    "cv_r2_folds": [
+      0.991845,
+      0.991368,
+      0.990592,
+      0.990795,
+      0.99093
+    ],
+    "n_trials": 100,
+    "elapsed_sec": 80.3,
+    "best_params": {
+      "n_estimators": 288,
+      "max_depth": 5,
+      "learning_rate": 0.025939229689691472,
+      "min_child_weight": 6,
+      "subsample": 0.5846989197706558,
+      "colsample_bytree": 0.5243303788368611,
+      "reg_lambda": 0.8712679552884259,
+      "reg_alpha": 16.02889326903093,
+      "gamma": 3.2930992179962306
+    }
+  },
+  "XGBoost_Nickel": {
+    "model": "XGBoost",
+    "metal": "Nickel",
+    "best_cv_r2": 0.988754,
+    "cv_r2_mean": 0.988754,
+    "cv_r2_std": 0.000677,
+    "cv_r2_folds": [
+      0.988472,
+      0.988462,
+      0.990104,
+      0.988359,
+      0.988374
+    ],
+    "n_trials": 100,
+    "elapsed_sec": 88.7,
+    "best_params": {
+      "n_estimators": 286,
+      "max_depth": 5,
+      "learning_rate": 0.026545490326922033,
+      "min_child_weight": 3,
+      "subsample": 0.6520951389781243,
+      "colsample_bytree": 0.8776946000689546,
+      "reg_lambda": 7.816445911436331,
+      "reg_alpha": 0.5817883094511557,
+      "gamma": 3.2791180928946497
+    }
+  }
+}

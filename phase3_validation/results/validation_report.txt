@@ -1,0 +1,35 @@
+HERA 2.0 PHYSICAL BEHAVIOR VALIDATION REPORT
+=======================================================
+
+METAL PARAMETER: CHROMIUM
+-------------------------------------------------------
+
+--- Scenario Monotonicity Test for Chromium ---
+  * Stage 1 (Clean): 14.06 ug/L
+  * Stage 2 (Moderately Polluted): 30.57 ug/L
+  * Stage 3 (Highly Polluted): 101.18 ug/L
+  * Stage 4 (Extreme Runoff): 267.76 ug/L
+Status: PASS
+
+--- Geochemical Sensitivity (Spearman Rank) for Chromium ---
+  * pH Sensitivity Correlation: -0.9996 (Expected: < 0) -> PASS
+  * EC Sensitivity Correlation: 0.9972 (Expected: > 0) -> PASS
+Status: PASS
+
+METAL PARAMETER: NICKEL
+-------------------------------------------------------
+
+--- Scenario Monotonicity Test for Nickel ---
+  * Stage 1 (Clean): 7.85 ug/L
+  * Stage 2 (Moderately Polluted): 18.88 ug/L
+  * Stage 3 (Highly Polluted): 80.50 ug/L
+  * Stage 4 (Extreme Runoff): 241.55 ug/L
+Status: PASS
+
+--- Geochemical Sensitivity (Spearman Rank) for Nickel ---
+  * pH Sensitivity Correlation: -0.9991 (Expected: < 0) -> PASS
+  * EC Sensitivity Correlation: 0.9973 (Expected: > 0) -> PASS
+Status: PASS
+
+=======================================================
+OVERALL PHYSICAL COMPLIANCE STATUS: SYSTEM PASSED

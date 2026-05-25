@@ -1,0 +1,34 @@
+========================================================================
+  HERA 2.0  Phase 2.5 — Overfitting Diagnostic Report (v2)
+  Dataset   : v2 (15,000 samples, 9 features)
+  Eval      : 80/20 holdout + 5-Fold CV
+========================================================================
+
+  Chromium (50 ug/L WHO limit)
+  ----------------------------------------------------------------------
+  Model                   Train R2   Test R2      Gap   CV mean    CV std    Verdict
+  ----------------------------------------------------------------------
+  Linear Regression        0.96911   0.96828   +0.08%   0.96884   0.00064       Safe
+  Ridge Regression         0.96844   0.96746   +0.10%   0.96819   0.00073       Safe
+  SVR (RBF Kernel)         0.99063   0.99048   +0.02%   0.99056   0.00021       Safe
+  Random Forest            0.99377   0.99144   +0.23%   0.99101   0.00027       Safe
+  XGBoost Regressor        0.99312   0.99194   +0.12%   0.99111   0.00045       Safe
+
+  Nickel (20 ug/L WHO limit)
+  ----------------------------------------------------------------------
+  Model                   Train R2   Test R2      Gap   CV mean    CV std    Verdict
+  ----------------------------------------------------------------------
+  Linear Regression        0.92112   0.92762   -0.65%   0.92227   0.00366       Safe
+  Ridge Regression         0.91891   0.92723   -0.83%   0.92028   0.00415       Safe
+  SVR (RBF Kernel)         0.98682   0.98747   -0.06%   0.98624   0.00239       Safe
+  Random Forest            0.99391   0.98959   +0.43%   0.98938   0.00086       Safe
+  XGBoost Regressor        0.99295   0.98874   +0.42%   0.98875   0.00068       Safe
+
+  Comparison vs Phase 2 Baseline:
+  ----------------------------------------------------------------------
+  Chromium   Random Forest           v1 R2=0.9587 gap=2.50%  ->  v2 R2=0.99144 gap=+0.23%  (dR2=+3.27%  dgap=-2.27%)
+  Chromium   XGBoost Regressor       v1 R2=0.9650 gap=1.75%  ->  v2 R2=0.99194 gap=+0.12%  (dR2=+2.69%  dgap=-1.63%)
+  Nickel     Random Forest           v1 R2=0.9446 gap=2.50%  ->  v2 R2=0.98959 gap=+0.43%  (dR2=+4.50%  dgap=-2.07%)
+  Nickel     XGBoost Regressor       v1 R2=0.9479 gap=3.21%  ->  v2 R2=0.98874 gap=+0.42%  (dR2=+4.08%  dgap=-2.79%)
+
+========================================================================
