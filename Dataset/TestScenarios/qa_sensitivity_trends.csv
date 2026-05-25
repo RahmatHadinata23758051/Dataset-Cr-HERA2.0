@@ -1,0 +1,4 @@
+Sweep_Variable,N_Points,EC_Min,EC_Max,Cr_Min,Cr_Max,Spearman_Correlation,Trend_Direction,pH_Min,pH_Max,TDS_Min,TDS_Max
+EC,30,150.0,2000.0,4.85,60.31,0.9982202447163514,Monotonic_Increase,,,,
+pH,60,,,12.32,17.32,-0.10043073564894384,Weak_Trend,3.0,9.0,,
+TDS,30,,,3.59,73.8,1.0,Monotonic_Increase,,,50.0,1500.0

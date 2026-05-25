@@ -1,0 +1,4 @@
+Sweep_Variable,Unique_Points,Genuine_Instability_Count,Artifact_Count,Ratio_Threshold,Min_Relative_Input_Change
+EC,30,0,0,10.0,0.0001
+TDS,30,0,0,10.0,0.0001
+pH,59,0,0,10.0,0.0001
