@@ -300,15 +300,3 @@ API inferensi HERA 2.0 dideploy di dalam folder `hera-monitoring/fastapi-model/`
    *Catatan*: Variabel root `cr_estimated` and `status` dipertahankan agar sistem penyerapan data sensor Laravel yang saat ini berjalan tidak mengalami kerusakan/error.
 
 ---
-
-## 8. Cara Menjalankan Pipeline & Verifikasi
-
-Seluruh pengujian integrasi dapat dijalankan dari terminal root proyek menggunakan virtual environment lokal:
-
-```powershell
-# Jalankan skrip pengujian API di bawah fastapi-model/
-cd hera-monitoring/fastapi-model/
-& .\venv\Scripts\python test_api.py
-```
-
-*Terakhir diperbarui: 25 Mei 2026*
