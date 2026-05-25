@@ -44,21 +44,30 @@ development-phase2-model/
 Dataset disintesis dengan memadukan batas kelarutan teoritis kesetimbangan kimia air (termodinamika $K_{sp}$) untuk mencegah model machine learning memprediksi konsentrasi logam bebas yang secara fisik mustahil terjadi di alam (melebihi batas jenuh).
 
 ### Formulasi Geokimia
+
 * **Chromium (Cr(III))**: Mengikuti kesetimbangan pengendapan Chromium(III) Hidroksida:
-  $$\text{Cr}^{3+} + 3\text{OH}^- \rightleftharpoons \text{Cr(OH)}_3(s) \quad \text{dengan} \quad K_{sp} = 10^{-30}$$
-  Batas kelarutan maksimum teoritis Chromium dalam $\mu\text{g/L}$ diformulasikan sebagai:
-  $$\log_{10}(\text{Cr}_{\text{limit}}) = 14 - 3\cdot\text{pH} + \log_{10}(51.996 \times 10^6)$$
+
+$$\text{Cr}^{3+} + 3\text{OH}^- \rightleftharpoons \text{Cr(OH)}_3(s) \quad \text{dengan} \quad K_{sp} = 10^{-30}$$
+
+Batas kelarutan maksimum teoritis Chromium dalam $\mu\text{g/L}$ diformulasikan sebagai:
+
+$$\log_{10}(\text{Cr}_{\text{limit}}) = 14 - 3\cdot\text{pH} + \log_{10}(51.996 \times 10^6)$$
 
 * **Nickel (Ni(II))**: Mengikuti kesetimbangan pengendapan Nickel(II) Hidroksida:
-  $$\text{Ni}^{2+} + 2\text{OH}^- \rightleftharpoons \text{Ni(OH)}_2(s) \quad \text{dengan} \quad K_{sp} = 5.48 \times 10^{-16}$$
-  Batas kelarutan maksimum teoritis Nickel dalam $\mu\text{g/L}$ diformulasikan sebagai:
-  $$\log_{10}(\text{Ni}_{\text{limit}}) = 28 - 2\cdot\text{pH} - \log_{10}(K_{sp,\text{water}}^2) + \log_{10}(K_{sp} \times 58.693 \times 10^6)$$
+
+$$\text{Ni}^{2+} + 2\text{OH}^- \rightleftharpoons \text{Ni(OH)}_2(s) \quad \text{dengan} \quad K_{sp} = 5.48 \times 10^{-16}$$
+
+Batas kelarutan maksimum teoritis Nickel dalam $\mu\text{g/L}$ diformulasikan sebagai:
+
+$$\log_{10}(\text{Ni}_{\text{limit}}) = 28 - 2\cdot\text{pH} - \log_{10}(K_{sp,\text{water}}^2) + \log_{10}(K_{sp} \times 58.693 \times 10^6)$$
 
 ### Rekayasa Fitur Termodinamika (5 Derived Features)
+
 Untuk membantu algoritma non-linear memahami dinamika pelarutan tanpa mengandalkan fitting buta, ditambahkan 5 fitur hasil kalkulasi fisika:
-1. `pH_squared` ($\text{pH}^2$): Merepresentasikan kuadrat aktivitas ion hidroksida ($[\text{OH}^-]^2$) yang mengontrol kesetimbangan kelarutan Nickel $Ni(OH)_2$.
+
+1. `pH_squared` ($\text{pH}^2$): Merepresentasikan kuadrat aktivitas ion hidroksida ($[\text{OH}^-]^2$) yang mengontrol kesetimbangan kelarutan Nickel $\text{Ni(OH)}_2$.
 2. `pOH_proxy` ($14.0 - \text{pH}$): Indikator langsung dari konsentrasi ion hidroksida di dalam larutan.
-3. `pH_EC_interact` ($\text{pH} \times \text{EC}$): Menangkap efek gabungan antara keasaman air dan kekuatan ionik total (ionic strength) terhadap kelarutan logam bebas.
+3. `pH_EC_interact` ($\text{pH} \times \text{EC}$): Menangkap efek gabungan antara keasaman air dan kekuatan ionik total (*ionic strength*) terhadap kelarutan logam bebas.
 4. `log_EC` ($\log_{10}(\text{EC})$): Linearitas kekuatan ionik terhadap konduktivitas listrik.
 5. `pH_temp_interact` ($\text{pH} \times \text{Suhu}$): Menyandikan persamaan Van 't Hoff untuk menangkap pergeseran nilai $K_{sp}$ akibat pengaruh temperatur air sungai.
 
