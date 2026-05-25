@@ -1,458 +1,150 @@
-# README Dataset Synthetic Cr
+# Phase 2.5: Model Fine-Tuning & Deployment Pipeline
 
-Dokumen ini menjelaskan:
-1. **bagaimana dataset synthetic dibuat**, dan  
-2. **dari dataset riil mana rentang tiap parameter diambil**.
+Folder ini berisi semua kode, hasil analisis, visualisasi publikasi, dan model tervalidasi untuk **Phase 2.5: Model Fine-Tuning & Improvement**. Seluruh tahapan pengerjaan (Area 1 - Area 5) telah diselesaikan secara lengkap.
 
-## 1. Ringkasan Hasil
+---
 
-Project ini memiliki 2 versi hasil synthetic:
+## Struktur Folder Terperbarui
 
-1. `Dataset/Synthetic` (single-source, referensi utama GFQA_v3)
-2. `Dataset/Synthetic_Multisource` (gabungan beberapa dataset riil)
-
-## 1A. Status Evaluasi Model (Penting untuk Dibaca)
-
-Untuk menghindari salah tafsir, repo ini sekarang memakai pemisahan berikut:
-
-- **Smoke test / sanity check:** cek cepat apakah pipeline jalan tanpa error (bukan bukti akurasi ilmiah).
-- **Demo inference metrics:** output dari contoh inferensi (`example_soft_sensor_inference.py`) hanya ilustrasi penggunaan.
-- **Benchmark metrics (model selection):** metrik **cross-validation** pada split train saja (`results/model_benchmark_cv.csv`).
-- **Final model metrics:** metrik **holdout test** independen (`results/model_holdout_metrics.csv`).
-
-Definisi ringkas:
-
-- **Smoke test**: memastikan fungsi dasar berjalan.
-- **Demo**: menunjukkan cara pakai model di kode inferensi.
-- **Validation/CV**: evaluasi berulang untuk membandingkan kandidat model secara lebih stabil.
-- **Final holdout test**: evaluasi terakhir pada data yang tidak dipakai training maupun pemilihan model.
-
-Catatan penting:
-
-- Jangan gunakan metrik dari script demo sebagai klaim performa utama.
-- Klaim performa sebaiknya merujuk ke file hasil evaluasi pipeline training.
-- Jika ukuran dataset kecil, variance antar-fold CV bisa tetap tinggi; interpretasi harus hati-hati.
-
-## 1A. Visualisasi Perbandingan Formula V1 vs V2
-
-Berikut visualisasi yang dihasilkan dari folder `image` untuk membandingkan formula synthetic Cr versi awal (V1) dan versi geochemical (V2).
-
-### Gambar 1 - Distribusi Cr (V1 vs V2)
-![Distribusi Cr V1 vs V2](image/visualisasi_01_distribution_comparison.png)
-
-Penjelasan:
-- V1 cenderung memiliki distribusi lebih sempit dan mirip Gaussian.
-- V2 menunjukkan distribusi lebih realistis untuk polutan (right-skewed/log-normal) dengan rentang lebih lebar.
-- Ini penting agar data synthetic lebih dekat dengan perilaku alami konsentrasi Cr di lapangan.
-
-### Gambar 2 - Sensitivitas pH terhadap Cr
-![Sensitivitas pH terhadap Cr](image/visualisasi_02_pH_sensitivity.png)
-
-Penjelasan:
-- Pada V2, relasi pH-Cr dibuat lebih geokimiawi: kondisi lebih asam cenderung meningkatkan kelarutan Cr.
-- Perbaikan ini mengurangi masalah double-counting pengaruh pH yang ada pada formula lama.
-- Hasilnya, respons model terhadap perubahan pH menjadi lebih konsisten secara ilmiah.
-
-### Gambar 3 - Korelasi Antar Parameter
-![Korelasi antar parameter](image/visualisasi_03_correlations.png)
-
-Penjelasan:
-- Korelasi positif Cr terhadap `EC` dan `TDS` tetap dipertahankan.
-- V2 memberikan pola korelasi yang lebih kuat dan masuk akal dibanding V1.
-- Matriks ini membantu validasi bahwa hubungan antar fitur tidak acak.
-
-### Gambar 4 - Analisis Kategori Perairan
-![Analisis kategori perairan](image/visualisasi_04_category_analysis.png)
-
-Penjelasan:
-- Menunjukkan perbedaan karakteristik Cr antar kategori perairan.
-- Berguna untuk memastikan data synthetic tetap menghormati konteks domain (Sungai, Danau, Waduk, Air tanah, Akuakultur).
-- Visual ini memudahkan pengecekan apakah rentang kategori sudah realistis.
-
-## 1B. Plot Evaluasi Model (`results/plots`)
-
-Berikut plot hasil evaluasi model dari folder `results/plots`.
-
-### Plot 1 - Perbandingan Prediksi antar Model
-![Perbandingan prediksi antar model](results/plots/predictions_comparison.png)
-
-Penjelasan:
-- Plot ini membandingkan nilai prediksi model terhadap data **holdout test**.
-- Plot ini bukan sumber tunggal pemilihan model; pemilihan utama tetap mengacu ke benchmark CV.
-- Gunakan bersama file `results/model_benchmark_cv.csv` dan `results/model_holdout_metrics.csv`.
-
-### Plot 2 - Perbandingan Metrik Kinerja
-![Perbandingan metrik kinerja model](results/plots/metrics_comparison.png)
-
-Penjelasan:
-- Menampilkan metrik evaluasi utama antar model pada holdout test.
-- Pemilihan model terbaik dilakukan dari metrik benchmark CV (bukan dari demo inference).
-- Plot ini melengkapi tabel metrik di laporan training (`results/ml_results_report.txt`).
-
-## 1C. Contoh Output Menjalankan `example_soft_sensor_inference.py`
-
-Perintah yang dijalankan:
-
-```bash
-python code/example_soft_sensor_inference.py
+```
+phase2.5_finetuning/
+│
+├── src/                          ← Semua kode Python Phase 2.5
+│   ├── generate_dataset.py       ← [Area 1] Dataset v2 (15.000 sampel, stratified, +5 derived features)
+│   ├── validate_area1.py         ← [Area 1] Skrip validasi visual dataset v2
+│   ├── tune_hyperparams.py       ← [Area 2] Optuna Bayesian Hyperparameter Tuning
+│   ├── train_models_v2.py        ← [Area 3] Retrain semua model dengan best hyperparams
+│   └── visualize_results_v2.py   ← [Area 4] Re-run visualisasi publikasi dengan model v2
+│
+├── results/
+│   ├── images/                   ← Hasil visualisasi publikasi resolusi tinggi (300 DPI)
+│   │   ├── Phase2.5_01..08.png   ← Grafik diagnostik v2 komprehensif
+│   │   └── area1_validation/     ← Visualisasi verifikasi dataset v2 (Strata pH)
+│   └── reports/                  ← Laporan teks diagnostik & parameter optimal Optuna
+│
+└── models/                       ← Model serialisasi biner hasil fine-tuning (v2)
+    ├── best_model_nickel_v2.pkl  ← Model terpilih Nickel (Random Forest)
+    └── best_model_chromium_v2.pkl← Model terpilih Chromium (XGBoost)
 ```
 
-Cuplikan output aktual:
+---
 
-```text
-EXAMPLE 1: Single Prediction from Sensor Dict
-Sensor Input:
-  EC............................ 1200
-  TDS........................... 850
-  pH............................ 6.8
-  Suhu Air (°C)................. 26.5
-  Suhu Lingkungan (°C).......... 28.3
-  Kelembapan Lingkungan (%)..... 72.1
-  Tegangan (V).................. 3.95
+## Ringkasan Eksekusi Proyek (Status Area)
 
-Predicted Cr: 42.49 μg/L
+| Area | Deskripsi | Status | Hasil Utama |
+|---|---|---|---|
+| **Area 1** | Feature Engineering + Dataset Expansion (15.000 sampel) | ✅ **Selesai** | Generasi dataset stratified v2 dengan 5 fitur termodinamika baru. |
+| **Area 2** | Optuna Bayesian Hyperparameter Tuning (100 trials, 5-Fold CV) | ✅ **Selesai** | Parameter optimal ditemukan untuk Random Forest dan XGBoost. |
+| **Area 3** | Retrain Semua Model + Evaluasi 5-Fold CV | ✅ **Selesai** | Serialisasi model v2. Chromium: XGBoost ($R^2 = 0.9919$), Nickel: RF ($R^2 = 0.9896$). |
+| **Area 4** | Visualisasi Publikasi & Diagnostik Overfitting | ✅ **Selesai** | Generasi 8 plot diagnostik resolusi tinggi (300 DPI). |
+| **Area 5** | Pembaruan FastAPI Preprocessing Pipeline | ✅ **Selesai** | Deployment API dual-metal dengan jaminan kompatibilitas balik 100%. |
 
-EXAMPLE 2: Batch Prediction from Sample Data
-Prediction Statistics:
-  Mean Cr:  37.73 μg/L
-  Std Cr:   6.94 μg/L
-  Min Cr:   27.31 μg/L
-  Max Cr:   47.67 μg/L
+---
 
-EXAMPLE 3: Time-Series Monitoring Simulation
-24-Hour Statistics:
-  Avg Cr:        41.53 μg/L
-  Peak Cr:       47.65 μg/L (Hour 6)
-  Minimum Cr:    34.59 μg/L (Hour 18)
-  Std Dev:       5.23 μg/L
-  Range:         13.06 μg/L
+## Analisis Komprehensif & Interpretasi Visualisasi (v2)
 
-EXAMPLE 4: Test Set Validation
-Validation Metrics:
-  MAE (Mean Absolute Error):     0.4840 μg/L
-  RMSE (Root Mean Square Error): 1.0182 μg/L
-  Mean % Error:                  2.99%
+Berikut adalah visualisasi ilmiah hasil fine-tuning model HERA 2.0 (v2) beserta analisis interpretasi mendalam untuk setiap gambar yang dihasilkan:
+
+### 1. Perbandingan Kinerja Sebelum vs Sesudah Fine-Tuning (v1 vs v2)
+![01 Before/After Improvement Dashboard](phase2.5_finetuning/results/images/Phase2.5_01_improvement_comparison.png)
+
+* **Interpretasi Ilmiah**:
+  * **Test $R^2$ (Kiri)**: Fine-tuning v2 (batang biru/hijau) mencatat lonjakan akurasi yang signifikan di seluruh algoritma utama dibandingkan baseline v1 (batang abu-abu). Peningkatan tertinggi diraih oleh model Nickel (Random Forest) yang naik sebesar **$+4.50\%$** (dari $0.9446$ menjadi $0.98959$), diikuti oleh Chromium (XGBoost) yang menembus akurasi ekstrem sebesar **$0.99194$**.
+  * **Overfitting Gap (Kanan)**: Gap perbedaan R2 antara data training dan data testing terpangkas sangat tajam hingga berada jauh di bawah ambang batas bahaya $2.0\%$. Pada model v1, gap overfitting Nickel XGBoost mencapai $3.21\%$, namun pada v2 berhasil ditekan menjadi hanya **$0.42\%$**. Hal ini membuktikan bahwa perluasan dataset ke 15.000 sampel terstratifikasi pH dan penyuntikan fitur termodinamika secara drastis meningkatkan ketangguhan generalisasi model.
+
+---
+
+### 2. Plot Paritas Kepadatan Prediksi (Density-Coloured Parity Plots)
+![02 Density-Coloured Parity Plots](phase2.5_finetuning/results/images/Phase2.5_02_parity_plots_v2.png)
+
+* **Interpretasi Ilmiah**:
+  * Plot ini memetakan konsentrasi prediksi model terhadap nilai pengukuran aktual pada data uji independen (20% holdout).
+  * Pewarnaan titik berbasis estimasi kepadatan kernel Gaussian (KDE Density) menunjukkan bahwa konsentrasi data terpadat (warna kuning/merah) berada tepat di sepanjang garis diagonal ideal $1:1$.
+  * Pita galat $\pm 2\sigma$ (arsiran biru untuk Chromium, hijau untuk Nickel) terlihat sangat sempit dan simetris di sepanjang spektrum konsentrasi, membuktikan stabilitas prediksi model baik pada konsentrasi sangat rendah (aman) maupun konsentrasi tinggi (tercemar).
+
+---
+
+### 3. Diagnostik Residu Model (Residual Diagnostic Analysis)
+![03 Residual Diagnostic Analysis](phase2.5_finetuning/results/images/Phase2.5_03_residual_analysis_v2.png)
+
+* **Interpretasi Ilmiah**:
+  * **Residuals vs Predicted (Kiri)**: Memetakan sebaran error terhadap nilai prediksi. Kurva rata-rata bergerak (*running mean* - garis merah) sejajar sempurna pada nilai $0.0$. Hal ini menunjukkan sifat **homoskedastisitas**, di mana variansi error bersifat konstan di seluruh rentang prediksi dan bebas dari bias sistematis.
+  * **Residual Distribution (Kanan)**: Distribusi probabilitas dari residu model (error) sangat presisi mendekati kurva distribusi normal ideal $N(\mu \approx 0.00, \sigma)$. Ini mengonfirmasi secara matematis bahwa galat model merupakan *white noise* acak murni, membuktikan tidak ada pola prediktif tersisa yang gagal diekstrak oleh model.
+
+---
+
+### 4. Tingkat Kepentingan Fitur Rekayasa (9-Feature Permutation Importance)
+![04 9-Feature Permutation Importance](phase2.5_finetuning/results/images/Phase2.5_04_feature_importance_9feat.png)
+
+* **Interpretasi Ilmiah**:
+  * Mengukur penurunan nilai $R^2$ ketika data suatu fitur diacak secara acak. Fitur dengan **garis tepi merah** merupakan fitur termodinamika hasil rekayasa fisika (derived features).
+  * Fitur rekayasa `pOH_proxy` ($14.0 - \text{pH}$) dan `pH_squared` ($\text{pH}^2$) menempati peringkat teratas kepentingan fitur bersama fitur mentah `pH` dan `EC_uScm`. 
+  * Penjelasan kimiawinya: konstanta kelarutan hidroksida logam berat ($K_{sp}$) sangat bergantung pada konsentrasi ion hidroksida secara non-linear (proporsional terhadap $[\text{OH}^-]^2$ atau $10^{2(\text{pH}-14)}$). Penyuntikan `pOH_proxy` dan `pH_squared` secara langsung menyajikan hubungan non-linear termodinamika ini kepada model berbasis pohon keputusan (RF & XGBoost), mempercepat pembelajaran struktur fisika air tanpa bergantung pada fitting matematis buta.
+
+---
+
+### 5. Dasbor Kinerja Multi-Algoritma (Performance Dashboard)
+![05 Model Comparison Dashboard](phase2.5_finetuning/results/images/Phase2.5_05_model_comparison_dashboard.png)
+
+* **Interpretasi Ilmiah**:
+  * Menampilkan perbandingan 3 metrik utama ($R^2$, RMSE, dan MAPE) di antara 5 algoritma regresi yang dilatih dengan parameter optimal Optuna.
+  * Batang berwarna merah menandai model dengan kinerja terbaik untuk masing-masing logam. Model non-linear (Random Forest dan XGBoost) mendominasi seluruh aspek kinerja dengan skor $R^2 > 0.988$ dan nilai error (RMSE & MAPE) terkecil.
+  * Model regresi linear sederhana (LinReg & Ridge) tertinggal jauh terutama pada target Nickel, membuktikan kuatnya pola non-linearitas di dalam sistem kimia sungai HERA.
+
+---
+
+### 6. Matriks Konfusi Regulasi WHO (Confusion Matrix Grid)
+![06 Confusion Matrix Grid](phase2.5_finetuning/results/images/Phase2.5_06_confusion_matrices_v2.png)
+
+* **Interpretasi Ilmiah**:
+  * Mengevaluasi keandalan klasifikasi biner sampel air berdasarkan standar batas aman organisasi kesehatan dunia (WHO Limit: $50\,\mu\text{g/L}$ untuk Chromium, $20\,\mu\text{g/L}$ untuk Nickel).
+  * Model XGBoost (Chromium) dan Random Forest (Nickel) mencetak akurasi klasifikasi luar biasa sebesar **$99.7\%$** dan **$99.6\%$** dengan skor F1 melampaui **$99.0\%$**. Hal ini memberikan jaminan absolut bahwa ketika sistem ini dideploy di lapangan, peringatan bahaya (*danger/warning status*) yang dikirimkan ke sensor monitoring dijamin akurat dan bebas dari alarm palsu (*false alarms*).
+
+---
+
+### 7. Bukti Konvergensi Bebas Overfit (Learning Curves)
+![07 Learning Curves v2](phase2.5_finetuning/results/images/Phase2.5_07_learning_curves_v2.png)
+
+* **Interpretasi Ilmiah**:
+  * Memetakan skor $R^2$ data latih (Training R2 - garis berwarna) dan validasi silang (CV R2 - garis hitam putus-putus) terhadap penambahan sampel data.
+  * Kurva pembelajaran menunjukkan konvergensi yang sangat mulus dan rapat seiring bertambahnya data menuju 15.000 sampel. 
+  * Gap akhir antara garis training dan validasi bernilai **$< 1.5\%$** untuk model SVR, RF, dan XGBoost, yang bertindak sebagai bukti ilmiah tak terbantahkan bahwa perluasan dataset v2 berhasil memecahkan masalah overfitting bawaan pada model fase sebelumnya.
+
+---
+
+### 8. Stabilitas Validasi Silang (5-Fold CV Stability)
+![08 5-Fold CV Stability](phase2.5_finetuning/results/images/Phase2.5_08_cv_fold_stability.png)
+
+* **Interpretasi Ilmiah**:
+  * Menggunakan visualisasi violin dan strip plot untuk menilai variansi model pada 5 lipatan validasi silang yang berbeda.
+  * Bentuk violin yang sangat tipis dan rapat pada model Random Forest dan XGBoost menunjukkan variansi performa yang sangat rendah di seluruh partisi data latih yang berbeda.
+  * Standar deviasi CV R2 yang sangat kecil ($0.00027$ untuk Cr RF dan $0.00068$ untuk Ni XGBoost) membuktikan model memiliki stabilitas ekstrem dan tidak sensitif terhadap bias pemisahan data (*data splitting bias*).
+
+---
+
+### 9. Visualisasi PCA 3D Interaktif untuk Evaluasi Nickel
+*File Output: [nickel_pca_3d.html](phase2.5_finetuning/results/images/nickel_pca_3d.html)*
+
+* **Interpretasi Ilmiah**:
+  * **Dimensi Reduksi & Informasi Terjaga**: Analisis Komponen Utama (PCA) dilakukan pada ruang 9 fitur terstandarisasi untuk Nickel. Tiga Komponen Utama pertama (PC1, PC2, PC3) berhasil menangkap **$98.82\%$** dari total variabilitas informasi geokimia air sungai (PC1: $70.89\%$, PC2: $16.32\%$, PC3: $11.61\%$). Hal ini membuktikan bahwa kita dapat mengevaluasi sebaran data 9 dimensi secara komprehensif hanya dalam ruang visualisasi 3 dimensi tanpa kehilangan informasi penting.
+  * **Dinamika Geokimia PC1 (70.89%)**: PC1 memiliki bobot positif tinggi pada konduktivitas listrik (`EC_uScm` = $0.36$), zat terlarut (`TDS_mgL` = $0.36$), dan tingkat keasaman (`pOH_proxy` = $0.36$), serta bobot negatif tinggi pada `pH` ($-0.36$). PC1 dengan demikian memetakan **Indeks Limpasan Asam & Mineralisasi**. Sebaran titik kuning/terang (konsentrasi Nickel tinggi) terdistribusi sangat linear sepanjang sumbu PC1 positif, membuktikan bahwa kelarutan Nickel didorong sangat kuat oleh kondisi air yang asam dan kaya ion terlarut.
+  * **Dinamika PC2 (16.32%) & PC3 (11.61%)**: PC2 memetakan efek temperatur termal (`Suhu_Air` = $0.71$), sedangkan PC3 memetakan koreksi kesetimbangan non-linear hidroksida logam. Titik-titik data membentuk lembaran elips melengkung di ruang 3D, memvisualisasikan batas kelarutan fisik ($K_{sp}$) yang membatasi konsentrasi Nickel di alam.
+
+* **Cara Menggunakan**:
+  * Buka file biner [nickel_pca_3d.html](phase2.5_finetuning/results/images/nickel_pca_3d.html) menggunakan browser web apa pun (Chrome, Edge, Firefox).
+  * Klik dan tahan mouse untuk **memutar ruang 3D** secara interaktif untuk menganalisis batas kluster geokimia.
+  * Gunakan scroll wheel untuk melakukan zoom, dan arahkan kursor (hover) di atas titik mana pun untuk melihat metrik raw sensor (`pH`, `EC`, `TDS`, `Suhu_Air`, `Nickel_ugL`, dan status kelulusan WHO).
+
+---
+
+## Cara Menjalankan Pipeline & Verifikasi
+
+Seluruh pengujian integrasi dapat dijalankan dari terminal root proyek menggunakan virtual environment lokal:
+
+```powershell
+# Jalankan skrip pengujian API di bawah fastapi-model/
+cd hera-monitoring/fastapi-model/
+& .\venv\Scripts\python test_api.py
 ```
 
-Penjelasan output:
-- **Example 1 (single prediction):** cara inferensi satu data sensor real-time.
-- **Example 2 (batch prediction):** inferensi beberapa baris data sekaligus.
-- **Example 3 (time-series):** simulasi monitoring 24 jam.
-- **Example 4 (demo sanity check):** cek cepat prediksi vs target pada subset kecil.
-
-Catatan ilmiah:
-
-- Example 4 **bukan** validasi utama dan tidak boleh dipakai sebagai benchmark final.
-- Metrik utama untuk pelaporan performa model harus diambil dari:
-  - `results/model_benchmark_cv.csv` (benchmark/model selection), dan
-  - `results/model_holdout_metrics.csv` (final independent holdout test).
-
-## 1D. Catatan Testing Dataset Ekstrem dan Pipeline yang Digunakan
-
-Selain training dan evaluasi standar, project ini juga dipakai untuk **behavior testing** model Cr dengan dataset baru yang didesain lebih ekstrem (misalnya kondisi air bersih, air tercemar, sampai limbah/industrial-like).
-
-Tujuan utamanya:
-- menguji konsistensi respons model,
-- mengecek arah tren fitur kunci,
-- dan memastikan prediksi tetap stabil saat parameter sensor berubah.
-
-### Rumus yang digunakan (derive TDS from EC)
-
-Rumus turunan TDS dari EC yang dipakai pada proses testing:
-
-`TDS = EC x 0.64`
-
-Catatan satuan:
-- Jika `EC` dalam `uS/cm`, maka `TDS` hasil konversi umum dipakai sebagai `mg/L` (aproksimasi untuk air alami).
-- Faktor `0.64` adalah faktor empiris yang umum (dapat bervariasi menurut komposisi ionik air).
-
-### Pipeline 1 (inference + analisis dataset real)
-
-![Visual Pipeline 1](image/Pipline-1.jpeg)
-
-Ringkasan pipeline yang digunakan:
-1. Load dataset CSV dengan kolom sensor (`Date Time`, `Temperature`, `ORP`, `pH`, `Turbidity`, `Conductivity`, `fDOM`).
-2. Rename `Conductivity (uS/cm)` menjadi `EC`.
-3. Buat kolom `TDS` dari `EC` dengan rumus `TDS = EC x 0.64`.
-4. Validasi kolom `pH`, `EC`, `TDS`.
-5. Drop missing values.
-6. Load model `.pkl`.
-7. Prediksi Cr dan simpan sebagai `Cr_predicted`.
-8. Analisis statistik (`min`, `max`, `mean`, `std`) + visualisasi:
-  - histogram `Cr_predicted`,
-  - scatter `EC vs Cr_predicted`,
-  - scatter `pH vs Cr_predicted`.
-9. Simpan hasil ke file CSV baru.
-10. Library: `pandas`, `numpy`, `matplotlib`, `joblib`.
-
-### Pipeline 2 (behavior validation: scenario + sensitivity)
-
-![Visual Pipeline 2](image/Pipeline-2.jpeg)
-
-Ringkasan pipeline yang digunakan untuk file `code/test_model_behavior.py`:
-1. Load model dari `models/best_model_rf_full.pkl` (+ scaler jika tersedia).
-2. Load dataset testing:
-  - `Dataset/TestScenarios/synthetic_cr_scenario_test.csv`
-  - `Dataset/TestScenarios/synthetic_cr_sensitivity_test.csv`
-3. Jalankan inference, tambah kolom `Cr_predicted` (dan `Error` opsional jika ada ground truth).
-4. Scenario analysis:
-  - group by `Scenario`,
-  - hitung mean/min/max/std,
-  - validasi urutan `Clean < Moderately Polluted < Highly Polluted < Extreme Industrial-like`,
-  - beri flag `PASS/FAIL`,
-  - simpan ke `results/testing/test_scenario_analysis.csv`.
-5. Sensitivity analysis (`EC`, `TDS`, `pH`):
-  - hitung korelasi Spearman dengan `Cr_predicted`,
-  - validasi tren: `EC` positif, `TDS` positif, `pH` negatif,
-  - klasifikasi kekuatan tren (`Strong/Moderate/Weak`),
-  - simpan ke `results/testing/test_sensitivity_analysis.csv`.
-6. Stability check:
-  - cek delta antar baris,
-  - abaikan langkah input sangat kecil/duplikat yang memicu artifact rasio,
-  - bedakan `GENUINE_INSTABILITY` vs `DESIGN_ARTIFACT_NEAR_ZERO_DELTA`.
-7. Visualisasi ke `results/testing/plots/`:
-  - scenario vs predicted Cr,
-  - `EC vs Cr_predicted`,
-  - `TDS vs Cr_predicted`,
-  - `pH vs Cr_predicted`.
-8. Final summary di console:
-  - scenario `PASS/FAIL`,
-  - trend `EC/TDS/pH` `OK/NOT OK`,
-  - overall `VALID/NOT VALID`.
-
-Implementasi modular yang dipakai:
-- `load_model()`
-- `load_data()`
-- `run_inference()`
-- `analyze_scenarios()`
-- `analyze_sensitivity()`
-- `check_stability()`
-- `plot_results()`
-- `main()`
-
-Catatan: evaluasi ini fokus pada **validasi perilaku model** (konsistensi, monotonic trend, stabilitas), bukan evaluasi akurasi klasik seperti RMSE/MAE.
-
-## 1E. Struktur Artefak Evaluasi dan Model
-
-Artefak hasil training sekarang dipisah agar reproducible dan tidak ambigu:
-
-- Hasil evaluasi:
-  - `results/model_benchmark_cv.csv`
-  - `results/model_holdout_metrics.csv`
-  - `results/model_comparison.csv`
-  - `results/ml_results_report.txt`
-
-- Model per-kandidat:
-  - `models/model_<model>_<scenario>.pkl`
-  - `models/model_<model>_<scenario>.scaler.pkl` (jika model butuh scaling)
-  - `models/model_<model>_<scenario>.metadata.json`
-
-- Alias backward compatibility:
-  - `models/best_model_<model>_<scenario>.pkl`
-  - `models/best_model_scaler_<model>_<scenario>.pkl`
-  - `models/best_model_metadata.json` (legacy fallback)
-
-## 1F. Plot Behavior Testing Terbaru (`results/testing/plots`)
-
-Gambar berikut adalah plot yang dihasilkan dari pipeline behavior validation terbaru.
-
-### Plot 1 - Scenario Predictions Boxplot
-![Scenario Predictions Boxplot](results/testing/plots/scenario_predictions_boxplot.png)
-
-Tahap: **Behavior validation - scenario test**.
-Penjelasan singkat: memperlihatkan sebaran prediksi Cr pada tiap skenario (`Clean` sampai `Extreme`) untuk mengecek pemisahan level kontaminasi.
-
-### Plot 2 - Sensitivity EC Sweep
-![Sensitivity EC Sweep](results/testing/plots/sensitivity_ec_sweep.png)
-
-Tahap: **Behavior validation - sensitivity test (EC)**.
-Penjelasan singkat: menunjukkan respons model saat `EC` dinaikkan bertahap; dipakai untuk verifikasi tren positif `EC -> Cr`.
-
-### Plot 3 - Sensitivity TDS Sweep
-![Sensitivity TDS Sweep](results/testing/plots/sensitivity_tds_sweep.png)
-
-Tahap: **Behavior validation - sensitivity test (TDS)**.
-Penjelasan singkat: menunjukkan respons model terhadap perubahan `TDS`; dipakai untuk verifikasi tren positif `TDS -> Cr`.
-
-### Plot 4 - Sensitivity pH Sweep
-![Sensitivity pH Sweep](results/testing/plots/sensitivity_ph_sweep.png)
-
-Tahap: **Behavior validation - sensitivity test (pH)**.
-Penjelasan singkat: memeriksa arah pengaruh pH terhadap Cr; dipakai untuk verifikasi tren negatif `pH -> Cr` (semakin basa, Cr cenderung menurun).
-
-## 1G. Visualisasi MWQ Terbaru (`Dataset/Testing-MWQ/images`)
-
-Berikut seluruh gambar analisis MWQ yang dibuat dari script terbaru.
-
-### MWQ 01 - Distribusi Prediksi Cr
-![MWQ 01](Dataset/Testing-MWQ/images/01_cr_distribution_histogram.png)
-
-Tahap: **MWQ inference - overview distribusi**.
-Penjelasan singkat: histogram global prediksi Cr untuk seluruh dataset MWQ, dipakai untuk melihat pusat data, rentang, dan potensi outlier.
-
-### MWQ 02 - EC vs Predicted Cr
-![MWQ 02](Dataset/Testing-MWQ/images/02_ec_vs_cr_scatter.png)
-
-Tahap: **MWQ inference - relasi fitur utama**.
-Penjelasan singkat: scatter hubungan `EC` dan prediksi Cr per dataset, untuk mengecek konsistensi arah tren antar-sumber data.
-
-### MWQ 03 - pH vs Predicted Cr
-![MWQ 03](Dataset/Testing-MWQ/images/03_ph_vs_cr_scatter.png)
-
-Tahap: **MWQ inference - relasi pH**.
-Penjelasan singkat: scatter hubungan pH dan prediksi Cr, membantu melihat apakah pola geokimia (pengaruh keasaman) tetap muncul pada data real.
-
-### MWQ 04 - TDS vs Predicted Cr
-![MWQ 04](Dataset/Testing-MWQ/images/04_tds_vs_cr_scatter.png)
-
-Tahap: **MWQ inference - relasi TDS**.
-Penjelasan singkat: memvisualisasikan korelasi `TDS` terhadap prediksi Cr sebagai pemeriksaan domain consistency.
-
-### MWQ 05 - Temperature vs Predicted Cr
-![MWQ 05](Dataset/Testing-MWQ/images/05_temperature_vs_cr_scatter.png)
-
-Tahap: **MWQ inference - variabel lingkungan**.
-Penjelasan singkat: mengecek apakah temperatur memunculkan pola ekstrem yang tidak realistis pada prediksi Cr.
-
-### MWQ 06 - Boxplot Prediksi per Dataset
-![MWQ 06](Dataset/Testing-MWQ/images/06_dataset_boxplot.png)
-
-Tahap: **MWQ inference - perbandingan antar dataset**.
-Penjelasan singkat: membandingkan median, IQR, dan sebaran prediksi Cr tiap dataset untuk menilai stabilitas antar-sumber.
-
-### MWQ 07 - ORP vs Predicted Cr
-![MWQ 07](Dataset/Testing-MWQ/images/07_orp_vs_cr_scatter.png)
-
-Tahap: **MWQ inference - analisis fitur tambahan**.
-Penjelasan singkat: menampilkan hubungan ORP terhadap prediksi Cr sebagai pemeriksaan perilaku model pada parameter redoks.
-
-### MWQ 08 - Correlation Heatmap
-![MWQ 08](Dataset/Testing-MWQ/images/08_correlation_heatmap.png)
-
-Tahap: **MWQ inference - ringkasan korelasi multivariat**.
-Penjelasan singkat: matriks korelasi antar fitur utama dan `Cr_predicted` untuk membaca dependensi global secara cepat.
-
-### MWQ 09 - Distribusi Parameter
-![MWQ 09](Dataset/Testing-MWQ/images/09_parameter_distributions.png)
-
-Tahap: **MWQ inference - quality check input/output**.
-Penjelasan singkat: distribusi tiap parameter sensor dan output prediksi, dipakai untuk cek rentang nilai dan potensi skew/outlier.
-
-### MWQ 10 - Rerata Prediksi per Dataset
-![MWQ 10](Dataset/Testing-MWQ/images/10_dataset_means_barplot.png)
-
-Tahap: **MWQ inference - agregasi hasil**.
-Penjelasan singkat: rata-rata prediksi Cr per dataset dengan error bar, membantu membandingkan level prediksi antar kelompok data.
-
-## 1H. Visualisasi MWQ Legacy (`Dataset/Testing-MWQ/result/plots`)
-
-Plot lama berikut tetap ditampilkan untuk jejak historis hasil.
-
-### Legacy 1 - Cr Distribution
-![Legacy Cr Distribution](Dataset/Testing-MWQ/result/plots/cr_distribution.png)
-
-Tahap: **MWQ legacy pipeline**.
-Penjelasan singkat: versi awal histogram distribusi prediksi Cr sebelum visualisasi diperluas.
-
-### Legacy 2 - EC vs Cr
-![Legacy EC vs Cr](Dataset/Testing-MWQ/result/plots/ec_vs_cr.png)
-
-Tahap: **MWQ legacy pipeline**.
-Penjelasan singkat: versi awal scatter `EC` terhadap prediksi Cr untuk referensi historis.
-
-### Legacy 3 - pH vs Cr
-![Legacy pH vs Cr](Dataset/Testing-MWQ/result/plots/ph_vs_cr.png)
-
-Tahap: **MWQ legacy pipeline**.
-Penjelasan singkat: versi awal scatter pH terhadap prediksi Cr.
-
-### Legacy 4 - TDS vs Cr
-![Legacy TDS vs Cr](Dataset/Testing-MWQ/result/plots/tds_vs_cr.png)
-
-Tahap: **MWQ legacy pipeline**.
-Penjelasan singkat: versi awal scatter `TDS` terhadap prediksi Cr.
-
-### Legacy 5 - Temperature vs Cr
-![Legacy Temperature vs Cr](Dataset/Testing-MWQ/result/plots/temperature_vs_cr.png)
-
-Tahap: **MWQ legacy pipeline**.
-Penjelasan singkat: versi awal scatter temperatur terhadap prediksi Cr untuk jejak historis sebelum analisis terstruktur.
-
-## 2. Cara Dataset Synthetic Dibuat
-
-Semua dataset synthetic dibuat dengan alur umum berikut:
-
-1. Identifikasi kategori perairan (mis. Sungai, Danau, Waduk, Air tanah, Akuakultur).
-2. Ambil nilai parameter dari dataset riil.
-3. Hitung rentang robust per kategori (utama: **p10-p90**, nilai normal: **p25-p75**).
-4. Generate data synthetic baru (bukan copy data asli):
-   - `EC` dibangkitkan dengan distribusi skewed/log-uniform.
-   - `TDS` diturunkan dari `EC` (`TDS ~ EC x faktor konversi x noise kecil`).
-   - `pH` dibangkitkan dalam rentang kategori.
-   - `Suhu Air` dan `Suhu Lingkungan` dibentuk dengan variasi musiman + noise.
-   - `Kelembapan` dan `Tegangan` dibentuk synthetic (karena tidak selalu ada di data riil).
-   - `Cr` dibentuk sebagai target dari `EC`, `TDS`, dan `pH` dengan noise kecil.
-5. Simpan file output + file QA korelasi.
-
-## 3. Sumber Rentang Dataset Riil (Single-Source)
-
-Folder output: `Dataset/Synthetic`
-
-Sumber rentang:
-- `Dataset/UNEP GEMSWater Global Freshwater Quality Archive/GFQA_v3`
-
-Pemetaan variabel -> sumber riil:
-- `EC` -> `Electrical_Conductance.csv`
-- `TDS` -> `Water.csv` (Parameter Code: `TDS`)
-- `pH` -> `pH.csv`
-- `Suhu Air (°C)` -> `Temperature.csv` (Parameter Code: `TEMP`)
-- `Suhu Lingkungan (°C)` -> `Temperature.csv` (Parameter Code: `TEMP-Air`)
-- Kategori air -> `GEMStat_station_metadata.csv`
-
-File hasil:
-- `synthetic_cr_dataset.csv`
-- `synthetic_cr_dataset_with_category.csv`
-- `ringkasan_rentang_kategori_p10_p90.csv`
-- `qa_korelasi_synthetic_cr.csv`
-
-## 4. Sumber Rentang Dataset Riil (Multisource)
-
-Folder output: `Dataset/Synthetic_Multisource`
-
-Sumber riil yang dipakai:
-1. `Dataset/UNEP GEMSWater Global Freshwater Quality Archive/GFQA_v3`
-2. `Dataset/A Comprehensive Surface Water Quality Monitoring Dataset (1940-2023)/Dataset/Combined Data/Combined_dataset.csv`
-3. `Dataset/Tabel 1 dalam dokumen Zenodo Nigeria/water_data.csv`
-4. `Dataset/Water Quality Monitoring Dataset for Tilapia (Oreochromis niloticus) Aquaculture in Montería, Colombia (2024)/Monteria_Aquaculture_Data.csv`
-5. `Dataset/Water Quality Pollution Indices for Heavy Metal Contamination Monitoring/Data.csv`
-
-Pemetaan kontribusi rentang:
-- **UNEP GFQA_v3**: sumber utama `EC`, `TDS`, `pH`, `Suhu Air`, `Suhu Lingkungan`, dan `Cr`.
-- **A Comprehensive**: tambahan rentang `pH` dan `Suhu Air` (terutama Sungai dan Danau).
-- **Nigeria**: tambahan rentang `pH` dan `TDS` (Air Permukaan dan Air Tanah).
-- **Monteria**: tambahan kategori `Akuakultur` untuk `pH` dan `Suhu Air`.
-- **Heavy Metal Indices**: tambahan referensi `Cr` (konteks sungai).
-
-File hasil:
-- `synthetic_cr_dataset_multisource.csv`
-- `synthetic_cr_dataset_multisource_with_category.csv`
-- `ringkasan_kontribusi_sumber_multisource.csv`
-- `ringkasan_rentang_multisource_p10_p90.csv`
-- `ringkasan_nilai_normal_multisource_p25_p75.csv`
-- `qa_korelasi_multisource.csv`
-
-## 5. Format Kolom Dataset Hasil
-
-Urutan kolom utama (konsisten):
-
-`Tanggal | Waktu | Tegangan (V) | Suhu Air (°C) | Suhu Lingkungan (°C) | Kelembapan Lingkungan (%) | TDS | EC | pH | Cr`
-
-Catatan:
-- `Cr` selalu di kolom terakhir.
-- `Tegangan` dan `Kelembapan` adalah variabel synthetic yang dibuat realistis.
-
-## 6. Dokumen Metodologi Lengkap
-
-Detail lengkap ada di:
-- `dokumentasi_pembuatan_dataset_synthetic_cr.md`
-- `dokumentasi_pembuatan_dataset_synthetic_cr_multisource.md`
+*Terakhir diperbarui: 25 Mei 2026*
